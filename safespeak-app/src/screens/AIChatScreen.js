@@ -1,0 +1,136 @@
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, FlatList,
+  StyleSheet, KeyboardAvoidingView, Platform, Linking, ActivityIndicator,
+} from 'react-native';
+import { aiChat } from '../services/api';
+import { colors, spacing, radius, font } from '../theme';
+
+const WELCOME = {
+  id: 'welcome', role: 'ai',
+  text: "Hi, I'm SafeSpeak AI. I'm here to listen and help. You can tell me what's happening — everything is confidential. How can I support you today?",
+};
+
+export default function AIChatScreen() {
+  const [messages, setMessages] = useState([WELCOME]);
+  const [input, setInput]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const listRef = useRef(null);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput('');
+
+    const userMsg = { id: Date.now().toString(), role: 'user', text };
+    const history = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.role, text: m.text }));
+
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+
+    try {
+      const res = await aiChat(text, history);
+      const aiMsg = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        text: res.response || "I'm here to help. Please reach out to a crisis line if you need immediate support.",
+        resources: res.resources || [],
+        isEmergency: res.isEmergency || false,
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch {
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(), role: 'ai',
+        text: "I'm having trouble connecting. If you need immediate help, please call 988 or text HOME to 741741.",
+        resources: [], isEmergency: false,
+      }]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
+
+  const renderMessage = ({ item }) => {
+    const isUser = item.role === 'user';
+    return (
+      <View style={[s.bubble, isUser ? s.userBubble : s.aiBubble]}>
+        {item.isEmergency && (
+          <View style={s.emergencyBanner}>
+            <Text style={s.emergencyText}>🚨 EMERGENCY — Please seek help immediately</Text>
+          </View>
+        )}
+        <Text style={[s.bubbleText, isUser && s.userText]}>{item.text}</Text>
+        {item.resources?.length > 0 && (
+          <View style={s.resources}>
+            <Text style={s.resourcesTitle}>📞 Resources:</Text>
+            {item.resources.map((r, i) => (
+              <TouchableOpacity key={i} onPress={() => {
+                if (r.contact.startsWith('1-') || /^\d{3}$/.test(r.contact)) {
+                  Linking.openURL(`tel:${r.contact.replace(/\D/g, '')}`);
+                }
+              }}>
+                <Text style={s.resourceItem}>• {r.name}: <Text style={s.resourceContact}>{r.contact}</Text></Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <FlatList
+        ref={listRef}
+        data={messages}
+        keyExtractor={m => m.id}
+        renderItem={renderMessage}
+        contentContainerStyle={s.list}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+      />
+      {loading && (
+        <View style={s.typingRow}>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={s.typingText}>SafeSpeak AI is responding...</Text>
+        </View>
+      )}
+      <View style={s.inputRow}>
+        <TextInput
+          style={s.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Type your message..."
+          placeholderTextColor={colors.textLight}
+          multiline
+          onSubmitEditing={send}
+        />
+        <TouchableOpacity style={[s.sendBtn, !input.trim() && s.sendBtnDisabled]} onPress={send} disabled={!input.trim() || loading}>
+          <Text style={s.sendIcon}>➤</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const s = StyleSheet.create({
+  container:      { flex: 1, backgroundColor: colors.bg },
+  list:           { padding: spacing.md, paddingBottom: spacing.lg },
+  bubble:         { maxWidth: '85%', borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
+  aiBubble:       { backgroundColor: '#fff', alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.border },
+  userBubble:     { backgroundColor: colors.accent, alignSelf: 'flex-end' },
+  bubbleText:     { fontSize: font.md, color: colors.text, lineHeight: 22 },
+  userText:       { color: '#fff' },
+  emergencyBanner:{ backgroundColor: '#fee2e2', borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.sm },
+  emergencyText:  { color: '#dc2626', fontWeight: '700', fontSize: font.sm },
+  resources:      { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  resourcesTitle: { fontSize: font.sm, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  resourceItem:   { fontSize: font.sm, color: colors.textSub, marginBottom: 2 },
+  resourceContact:{ color: colors.accent, fontWeight: '600' },
+  typingRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: spacing.sm, gap: 8 },
+  typingText:     { fontSize: font.sm, color: colors.textSub },
+  inputRow:       { flexDirection: 'row', alignItems: 'flex-end', padding: spacing.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
+  input:          { flex: 1, backgroundColor: colors.bg, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 10, fontSize: font.md, color: colors.text, maxHeight: 100 },
+  sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
+  sendBtnDisabled:{ backgroundColor: colors.border },
+  sendIcon:       { color: '#fff', fontSize: 16 },
+});

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   FaPhone, 
   FaEnvelope, 
@@ -12,12 +11,15 @@ import {
   FaTwitter,
   FaFacebook,
   FaGlobe,
-  FaShieldAlt
+  FaShieldAlt,
+  FaExclamationTriangle,
+  FaChild,
+  FaLink,
+  FaExternalLinkAlt
 } from 'react-icons/fa';
 
 const Contact = () => {
   const [openSection, setOpenSection] = useState(null);
-  const [expandedCards, setExpandedCards] = useState({});
 
   const toggleSection = (section) => {
     if (openSection === section) {
@@ -27,39 +29,121 @@ const Contact = () => {
     }
   };
 
-  const toggleCard = (cardId) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [cardId]: !prev[cardId]
-    }));
-  };
-
-  const contactMethods = [
+  const resources = [
     {
-      id: 'phone',
-      icon: <FaPhone className="text-sky-500" />,
-      title: 'Phone Support',
-      description: 'Speak directly with our support team',
-      details: [
-        { label: 'Emergency (24/7)', value: '+251 911 123 456', type: 'emergency' },
-        { label: 'General Inquiries', value: '+251 911 789 012', type: 'general' },
-        { label: 'Reporting Hotline', value: '+251 911 345 678', type: 'hotline' }
-      ],
-      bgColor: 'bg-blue-50',
-      iconBg: 'bg-blue-100'
+      id: 'ncmec',
+      icon: <FaChild className="text-sky-500" />,
+      title: 'National Center for Missing & Exploited Children',
+      description: 'Report child exploitation or get help removing online imagery',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-lg border border-gray-100">
+            <h4 className="font-medium text-gray-800 mb-2">Other Resources</h4>
+            <p className="text-sm text-gray-600 mb-3">
+              Whether you or someone you know is experiencing exploitation, or you want to better understand 
+              ways the National Center for Missing & Exploited Children can help.
+            </p>
+            
+            <div className="mt-3 p-3 bg-sky-50 rounded-lg">
+              <p className="text-sm font-medium text-sky-800 mb-2">If you need help with removing imagery:</p>
+              <a 
+                href="https://missinks.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 text-sm"
+              >
+                <FaLink className="text-xs" />
+                Visit Missinks.org – Is Your Exploit Content Out There?
+                <FaExternalLinkAlt className="text-xs" />
+              </a>
+              <p className="text-xs text-gray-500 mt-2">
+                Get step-by-step instructions about how to contact an online platform directly to flag 
+                your nude, partially nude, or sexually explicit image or video for removal.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg border border-gray-100">
+            <h4 className="font-medium text-gray-800 mb-2">Take It Down</h4>
+            <p className="text-sm text-gray-600 mb-3">
+              If you have nude, partially nude or sexually explicit images or videos taken before you were 18 
+              that you believe may have been or will be shared online:
+            </p>
+            <a 
+              href="https://takeitdown.ncmec.org" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition text-sm"
+            >
+              Visit TakeItDown.ncmec.org
+              <FaExternalLinkAlt className="text-xs" />
+            </a>
+            <p className="text-xs text-gray-500 mt-2">
+              Free service to help stop the online circulation of your photos or videos.
+            </p>
+          </div>
+        </div>
+      )
     },
     {
-      id: 'email',
+      id: '24hour',
+      icon: <FaPhone className="text-rose-500" />,
+      title: '24-Hour Call Center',
+      description: 'Report information about a missing or exploited child',
+      content: (
+        <div className="space-y-3">
+          <div className="bg-white p-4 rounded-lg border border-gray-100">
+            <p className="text-sm text-gray-600 mb-3">
+              To report information about a missing or exploited child call our 24-Hour Call Center:
+            </p>
+            <a 
+              href="tel:1-800-THE-LOST" 
+              className="text-2xl font-bold text-sky-600 hover:text-sky-700 block mb-2"
+            >
+              1-800-THE-LOST
+            </a>
+            <p className="text-xs text-gray-500">(1-800-843-5678)</p>
+            
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                General inquiries to National Center for Missing and Exploited Children.
+              </p>
+              <a 
+                href="https://missingskills.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sky-600 hover:text-sky-700 text-sm inline-flex items-center gap-1 mt-2"
+              >
+                Visit missingskills.org
+                <FaExternalLinkAlt className="text-xs" />
+              </a>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <div className="flex items-start gap-2">
+              <FaExclamationTriangle className="text-amber-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">If you are unsure or someone is in immediate danger:</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Please call <span className="font-bold">911</span> or your local police immediately.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'support',
       icon: <FaEnvelope className="text-green-500" />,
       title: 'Email Support',
-      description: 'Send us a message anytime',
+      description: 'General inquiries and support',
       details: [
-        { label: 'Support', value: 'support@safespeak.org', type: 'support' },
-        { label: 'Emergency Reports', value: 'emergency@safespeak.org', type: 'emergency' },
-        { label: 'Partnerships', value: 'partners@safespeak.org', type: 'partners' }
-      ],
-      bgColor: 'bg-green-50',
-      iconBg: 'bg-green-100'
+        { label: 'General Inquiries', value: 'info@safespeak.org' },
+        { label: 'Support', value: 'support@safespeak.org' },
+        { label: 'Emergency Reports', value: 'emergency@safespeak.org' }
+      ]
     },
     {
       id: 'messaging',
@@ -69,10 +153,8 @@ const Contact = () => {
       details: [
         { label: 'WhatsApp', value: '+251 911 123 456', link: 'https://wa.me/251911123456' },
         { label: 'Telegram', value: '@safespeak_support', link: 'https://t.me/safespeak_support' },
-        { label: 'Signal', value: '+251 911 123 456', link: '#' }
-      ],
-      bgColor: 'bg-green-50',
-      iconBg: 'bg-green-100'
+        { label: 'Signal', value: '+251 911 123 456' }
+      ]
     },
     {
       id: 'location',
@@ -82,17 +164,15 @@ const Contact = () => {
       details: [
         { label: 'Head Office', value: 'Addis Ababa, Bole Road, Ethiopia', hours: 'Mon-Fri 9AM-5PM' },
         { label: 'Regional Office', value: 'Bahir Dar, Piazza, Ethiopia', hours: 'Mon-Fri 9AM-5PM' }
-      ],
-      bgColor: 'bg-red-50',
-      iconBg: 'bg-red-100'
+      ]
     }
   ];
 
   const socialMedia = [
-    { icon: <FaTwitter />, name: 'Twitter', link: 'https://twitter.com/safespeak', color: 'text-blue-400' },
-    { icon: <FaFacebook />, name: 'Facebook', link: 'https://facebook.com/safespeak', color: 'text-blue-600' },
-    { icon: <FaTelegram />, name: 'Telegram', link: 'https://t.me/safespeak', color: 'text-blue-500' },
-    { icon: <FaWhatsapp />, name: 'WhatsApp', link: 'https://wa.me/251911123456', color: 'text-green-500' }
+    { icon: <FaTwitter />, name: 'Twitter', link: '#', color: 'text-blue-400' },
+    { icon: <FaFacebook />, name: 'Facebook', link: '#', color: 'text-blue-600' },
+    { icon: <FaTelegram />, name: 'Telegram', link: '#', color: 'text-blue-500' },
+    { icon: <FaWhatsapp />, name: 'WhatsApp', link: '#', color: 'text-green-500' }
   ];
 
   return (
@@ -102,10 +182,10 @@ const Contact = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            Contact Us
+            CyberTipline & Support
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            We're here to help 24/7. Choose how you'd like to reach us.
+            Report missing or exploited children, get help removing online imagery, or contact our support team.
           </p>
         </div>
 
@@ -115,39 +195,44 @@ const Contact = () => {
             <div className="flex items-center gap-3">
               <FaShieldAlt className="text-rose-500 text-xl" />
               <div>
-                <span className="font-semibold text-rose-700">Emergency?</span>
-                <p className="text-sm text-gray-600">24/7 Immediate assistance available</p>
+                <span className="font-semibold text-rose-700">Immediate Danger?</span>
+                <p className="text-sm text-gray-600">Call 911 or your local police immediately</p>
               </div>
             </div>
             <a 
-              href="tel:+251911123456"
+              href="tel:911"
               className="bg-rose-500 text-white px-4 py-2 rounded-lg hover:bg-rose-600 transition flex items-center gap-2"
             >
               <FaPhone className="text-sm" />
-              Call Now
+              Call 911
             </a>
           </div>
         </div>
 
         {/* Main Contact Sections - Dropdown Style */}
         <div className="space-y-3 mb-8">
-          {contactMethods.map((method) => (
-            <div key={method.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          {resources.map((resource) => (
+            <div key={resource.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
               {/* Section Header - Clickable */}
               <button
-                onClick={() => toggleSection(method.id)}
+                onClick={() => toggleSection(resource.id)}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full ${method.iconBg} flex items-center justify-center`}>
-                    {method.icon}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center
+                    ${resource.id === 'ncmec' ? 'bg-sky-100' : 
+                      resource.id === '24hour' ? 'bg-rose-100' : 
+                      resource.id === 'support' ? 'bg-green-100' :
+                      resource.id === 'messaging' ? 'bg-green-100' : 'bg-red-100'}`}
+                  >
+                    {resource.icon}
                   </div>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-800">{method.title}</h3>
-                    <p className="text-sm text-gray-500">{method.description}</p>
+                    <h3 className="font-semibold text-gray-800">{resource.title}</h3>
+                    <p className="text-sm text-gray-500">{resource.description}</p>
                   </div>
                 </div>
-                {openSection === method.id ? (
+                {openSection === resource.id ? (
                   <FaChevronUp className="text-gray-400" />
                 ) : (
                   <FaChevronDown className="text-gray-400" />
@@ -155,88 +240,48 @@ const Contact = () => {
               </button>
 
               {/* Expanded Content */}
-              {openSection === method.id && (
+              {openSection === resource.id && (
                 <div className="border-t border-gray-200 bg-gray-50 p-4">
-                  <div className="space-y-3">
-                    {method.details.map((detail, index) => (
-                      <div 
-                        key={index}
-                        className="bg-white rounded-lg p-3 border border-gray-100 hover:shadow-sm transition"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">{detail.label}</p>
-                            {detail.link ? (
-                              <a 
-                                href={detail.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sky-600 font-medium hover:underline"
-                              >
-                                {detail.value}
-                              </a>
-                            ) : detail.type === 'emergency' ? (
-                              <a href={`tel:${detail.value}`} className="text-rose-600 font-medium hover:underline">
-                                {detail.value}
-                              </a>
-                            ) : detail.type === 'hotline' ? (
-                              <a href={`tel:${detail.value}`} className="text-sky-600 font-medium hover:underline">
-                                {detail.value}
-                              </a>
-                            ) : (
-                              <p className="text-gray-700">{detail.value}</p>
-                            )}
-                            {detail.hours && (
-                              <p className="text-xs text-gray-400 mt-1">{detail.hours}</p>
-                            )}
-                          </div>
-                          {detail.type === 'emergency' && (
-                            <span className="text-xs bg-rose-100 text-rose-600 px-2 py-1 rounded-full">
-                              24/7
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Quick Actions */}
-                    <div className="flex gap-2 mt-2">
-                      {method.id === 'phone' && (
-                        <>
-                          <button 
-                            onClick={() => toggleCard('callback')}
-                            className="flex-1 text-sm bg-sky-500 text-white py-2 rounded hover:bg-sky-600 transition"
-                          >
-                            Request Callback
-                          </button>
-                          {expandedCards['callback'] && (
-                            <div className="mt-2 p-3 bg-sky-50 rounded-lg">
-                              <input 
-                                type="text" 
-                                placeholder="Your phone number" 
-                                className="w-full px-3 py-2 border rounded mb-2 text-sm"
-                              />
-                              <button className="w-full bg-sky-500 text-white py-2 rounded text-sm">
-                                Submit
-                              </button>
+                  {resource.content ? (
+                    resource.content
+                  ) : (
+                    <div className="space-y-3">
+                      {resource.details?.map((detail, index) => (
+                        <div 
+                          key={index}
+                          className="bg-white rounded-lg p-3 border border-gray-100 hover:shadow-sm transition"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">{detail.label}</p>
+                              {detail.link ? (
+                                <a 
+                                  href={detail.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sky-600 font-medium hover:underline"
+                                >
+                                  {detail.value}
+                                </a>
+                              ) : (
+                                <p className="text-gray-700">{detail.value}</p>
+                              )}
+                              {detail.hours && (
+                                <p className="text-xs text-gray-400 mt-1">{detail.hours}</p>
+                              )}
                             </div>
-                          )}
-                        </>
-                      )}
-                      {method.id === 'email' && (
-                        <button className="flex-1 text-sm bg-sky-500 text-white py-2 rounded hover:bg-sky-600 transition">
-                          Send Message
-                        </button>
-                      )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* Social Media - Interactive Cards */}
+        {/* Social Media */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
           <h3 className="font-semibold text-gray-800 mb-4">Connect With Us</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -257,21 +302,26 @@ const Contact = () => {
           </div>
         </div>
 
-        {/* Office Hours Card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <FaClock className="text-sky-500 text-xl" />
-            <h3 className="font-semibold text-gray-800">Office Hours</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600">Monday - Friday</p>
-              <p className="font-medium">9:00 AM - 5:00 PM</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Emergency</p>
-              <p className="font-medium text-rose-600">24/7 Available</p>
-            </div>
+        {/* Activate Windows Notice */}
+        <div className="bg-gray-100 rounded-lg p-3 mb-4">
+          <p className="text-xs text-gray-600 flex items-center gap-2">
+            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+            Activate Windows
+            <span className="text-gray-400">Go to Settings to activate Windows.</span>
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-lg border border-gray-200 p-2">
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              placeholder="Search the web and Windows"
+              className="w-full px-3 py-2 text-sm border-none focus:outline-none"
+            />
+            <button className="px-4 py-2 bg-gray-100 text-gray-600 rounded text-sm hover:bg-gray-200">
+              Search
+            </button>
           </div>
         </div>
 

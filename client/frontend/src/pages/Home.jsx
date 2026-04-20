@@ -64,7 +64,7 @@ const Home = () => {
                 ensures responsible reporting and faster support when needed.
               </p>
 
-              {/* PRIMARY ACTIONS - Updated with Link to Report page */}
+              {/* PRIMARY ACTIONS - Updated with Link to HowToReport page */}
               <div className="flex items-center gap-6">
 
                 <Link
@@ -75,7 +75,7 @@ const Home = () => {
                 </Link>
 
                 <Link
-                  to="/faq"
+                  to="/how-to-report"  // Changed from "/faq" to "/how-to-report"
                   className="text-sky-500 font-medium hover:underline"
                 >
                   See how to report?
