@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ── Base URL ──────────────────────────────────────────────────────────────────
 // Android emulator:  http://10.0.2.2:5000/api
 // iOS simulator:     http://localhost:5000/api
-// Physical device:   http://192.168.197.165:5000/api
-const BASE = 'http://192.168.45.165:5000/api';
+// Physical device:   use Render URL below
+const BASE = 'https://safespeak-api-vkw6.onrender.com/api';
 export const BASE_URL = BASE;
 
 const getToken = async () => await AsyncStorage.getItem('token');
