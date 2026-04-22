@@ -1,168 +1,168 @@
 /**
- * SafeSpeak Gemini AI Engine
- * Uses Google Gemini API for real conversational AI.
- * Supports English, Amharic (አማርኛ), and Afaan Oromoo.
- * Falls back to dataset engine if Gemini is unavailable.
+ * SafeSpeak AI Pipeline
+ * Priority: Python ML → OpenAI GPT → Keyword-NLP
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { classify: datasetClassify, chat: datasetChat } = require('./engine');
-const { RESOURCES } = require('./dataset');
+const { classify: keywordClassify, chat: keywordChat, buildAbuseResponse } = require('./engine');
 
-let genAI = null;
-let model = null;
+const ML_SERVER = process.env.ML_SERVER_URL || 'http://localhost:5002';
 
-const initGemini = () => {
-  if (!process.env.GEMINI_API_KEY) return false;
+// ── OpenAI init (lazy) ────────────────────────────────────────────────────────
+let openaiClient = null;
+
+const initOpenAI = () => {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key || key === 'your_openai_api_key_here') return false;
+  if (openaiClient) return true;
   try {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.9,
-        maxOutputTokens: 512,
-      },
-    });
+    const { OpenAI } = require('openai');
+    openaiClient = new OpenAI({ apiKey: key });
+    console.log('✅ OpenAI initialized');
     return true;
-  } catch {
+  } catch (e) {
+    console.log('⚠️  OpenAI init failed:', e.message);
     return false;
   }
 };
 
-// ── System prompt — defines SafeSpeak AI persona ─────────────────────────────
-const SYSTEM_PROMPT = `You are SafeSpeak AI, a compassionate and professional support assistant for a child and abuse reporting platform called SafeSpeak, used in Ethiopia.
-
-YOUR ROLE:
-- Provide empathetic, trauma-informed support to people reporting abuse or seeking help
-- Help users understand how to report incidents through the SafeSpeak platform
-- Detect emergency/crisis situations and provide immediate resources
-- Answer questions about the reporting process, privacy, and case tracking
-
-LANGUAGES:
-- Detect the language of the user's message automatically
-- Respond in the SAME language the user writes in
-- Supported languages: English, Amharic (አማርኛ), Afaan Oromoo
-- If unsure of language, respond in English
-
-TONE:
-- Warm, calm, and non-judgmental
-- Never minimize or dismiss what the user shares
-- Use simple, clear language — avoid jargon
-- Always validate the user's feelings first before providing information
-
-EMERGENCY DETECTION:
-- If the user mentions suicide, self-harm, immediate danger, or being actively harmed RIGHT NOW, treat it as a CRITICAL emergency
-- In emergencies, always provide: Emergency (911/112), Suicide Prevention (988), Crisis Text Line (Text HOME to 741741)
-- For Ethiopia specifically: Emergency number is 911, Women & Children Affairs hotline
-
-SAFESPEAK PLATFORM INFO:
-- Users can report abuse anonymously at /report
-- Reports are encrypted and confidential
-- Users get a Case ID to track their report at /track
-- The form takes 3-5 minutes to complete
-- Most fields are optional to protect privacy
-- AI automatically prioritizes urgent cases
-
-IMPORTANT RULES:
-- NEVER provide medical diagnoses
-- NEVER tell users what to do legally — suggest they consult legal aid
-- NEVER store or repeat personal information the user shares
-- ALWAYS end responses with an offer to help further or a relevant resource
-- Keep responses concise — 2-4 sentences max unless more detail is needed
-- If asked about something outside your scope, gently redirect to SafeSpeak's purpose
-
-RESOURCES TO MENTION WHEN RELEVANT:
-- Emergency: 911 / 112
-- Suicide Prevention: 988 (or Text HOME to 741741)
-- Domestic Violence: 1-800-799-7233
-- Child Abuse: 1-800-422-4453
-- Sexual Assault (RAINN): 1-800-656-4673
-- Human Trafficking: 1-888-373-7888`;
-
-// ── Detect emergency from text ────────────────────────────────────────────────
-const EMERGENCY_PATTERNS = [
-  /suicid/i, /kill\s*(my)?self/i, /end\s*my\s*life/i, /want\s*to\s*die/i,
-  /overdos/i, /hanging/i, /self.?harm/i, /cut\s*myself/i,
-  // Amharic patterns
-  /እራሴን\s*ልግደል/i, /መሞት\s*እፈልጋለሁ/i,
-  // Oromo patterns
-  /of\s*ajjeesuu/i, /du'uu\s*barbaada/i,
-];
-
-const isEmergency = (text) => EMERGENCY_PATTERNS.some(p => p.test(text));
-
-// ── Extract resources from Gemini response text ───────────────────────────────
-const extractResources = (text) => {
-  const found = [];
-  if (/988|suicide/i.test(text))           found.push(RESOURCES.suicide);
-  if (/741741|crisis\s*text/i.test(text))  found.push(RESOURCES.crisisText);
-  if (/911|emergency/i.test(text))         found.push(RESOURCES.emergency);
-  if (/1-800-799|domestic/i.test(text))    found.push(RESOURCES.domesticViolence);
-  if (/1-800-422|child\s*abuse/i.test(text)) found.push(RESOURCES.childAbuse);
-  if (/rainn|1-800-656|sexual/i.test(text))  found.push(RESOURCES.rainn);
-  if (/trafficking|1-888-373/i.test(text))   found.push(RESOURCES.trafficking);
-  return [...new Map(found.map(r => [r.name, r])).values()]; // dedupe
+// ── Python ML classifier ──────────────────────────────────────────────────────
+const mlClassify = async (description, isVictimSafe) => {
+  const res = await fetch(`${ML_SERVER}/ml/classify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description, isVictimSafe }),
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!res.ok) throw new Error('ML server error');
+  return await res.json();
 };
 
-// ── Build conversation history for Gemini ────────────────────────────────────
-const buildHistory = (history) =>
-  history.slice(-10).map(m => ({
-    role: m.role === 'user' ? 'user' : 'model',
-    parts: [{ text: m.text }],
-  }));
+// ── Main classify ─────────────────────────────────────────────────────────────
+const classify = async (description, _abuseTypes = [], isVictimSafe = '') => {
+  try {
+    const r = await mlClassify(description, isVictimSafe);
+    console.log(`🧠 ML: ${r.classification}`);
+    return r;
+  } catch (e) { console.log(`⚠️  ML unavailable: ${e.message}`); }
+  console.log('📝 Keyword-NLP fallback');
+  return keywordClassify(description, [], isVictimSafe);
+};
 
-// ── Main chat function ────────────────────────────────────────────────────────
+// ── System prompt ─────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are SafeSpeak Mentor, a warm, patient, and knowledgeable AI support guide on SafeSpeak — an abuse reporting platform in Ethiopia.
+
+Your role:
+1. LISTEN AND VALIDATE — When someone shares something painful, acknowledge their feelings first. Use simple, empathetic language. Remind them: it is not their fault, they are brave, and they are not alone.
+
+2. GUIDE REPORTING — When asked how to report, walk them through these exact steps:
+   Step 1: Create a free account at /signup. Your identity is protected.
+   Step 2: Click "Report Incident" from the menu or home page.
+   Step 3: Describe what happened in your own words. You do NOT need to know the abuse type — our AI identifies it automatically.
+   Step 4: Optionally upload photos, videos, or documents as evidence.
+   Step 5: Choose to stay anonymous or provide contact details for updates.
+   Step 6: Click "Submit Report". You will receive a Case ID — save it.
+   Step 7: Use your Case ID + email at /track to check your case status anytime.
+
+3. EXPLAIN WHAT HAPPENS NEXT — After reporting:
+   - A trained support team reviews your case within 24–48 hours.
+   - Urgent cases are escalated immediately.
+   - You may receive messages or appointment notifications.
+   - Track your case at /track anytime.
+
+4. SAFETY PLANNING — If someone is in danger:
+   - Ask if they are currently safe.
+   - Suggest moving to a public area, contacting a trusted person, or calling emergency services.
+   - Provide hotlines: SafeSpeak +251965485715, Crisis Support +251987240570.
+
+5. ABUSE DISCLOSURE — When someone tells you they are being abused:
+   - Start with empathy and validation. Do not rush to advice.
+   - Explain what is happening is wrong and not their fault.
+   - Tell them SafeSpeak can help them report safely and anonymously.
+   - Offer to walk them through the reporting steps.
+   - Provide relevant support contacts.
+
+Rules:
+- Match the user's language: English, Amharic (አማርኛ), or Afaan Oromoo.
+- Give thorough, helpful responses — not one-liners. Be like a knowledgeable, caring friend.
+- Use numbered steps when giving instructions.
+- If there is an emergency, give hotlines first, then support.
+- You are a guide and mentor, not a legal or medical professional.
+- Emergency contacts: SafeSpeak +251965485715, Crisis +251987240570, WhatsApp +251960255733.`;
+
+// ── Intent detection ──────────────────────────────────────────────────────────
+const detectIntent = (message) => {
+  const m = message.toLowerCase();
+  if (/suicide|kill myself|want to die|end my life|እራሴን ልግደል/i.test(m)) return 'emergency';
+  if (/danger|unsafe|threat|going to hurt|going to kill|help me now|what should i do|what do i do|now what/i.test(m)) return 'safety_plan';
+  if (/how.*report|where.*report|steps.*report|how do i report/i.test(m)) return 'reporting_guide';
+  if (/what happen|next step|after report|track.*case|already submitted/i.test(m)) return 'next_steps';
+  if (/scared|afraid|don.t know|confused|alone|hopeless/i.test(m)) return 'emotional_support';
+  if (/hit|beat|slap|punch|kick|abuse|assault|rape|harass|threaten|stalk|hurt|force/i.test(m)) return 'abuse_disclosure';
+  return 'general';
+};
+
+// ── OpenAI chat ───────────────────────────────────────────────────────────────
 const geminiChat = async (message, history = []) => {
-  // Always check for emergency first
-  const emergency = isEmergency(message);
-
-  if (!model && !initGemini()) {
-    // Gemini not available — fall back to dataset engine
-    const fallback = datasetChat(message, history);
-    return { ...fallback, model: 'dataset-fallback' };
+  if (!initOpenAI()) {
+    console.log('⚠️  OpenAI not available — using keyword engine');
+    return keywordChat(message, history);
   }
 
   try {
-    const chat = model.startChat({
-      history: [
-        // Inject system prompt as first exchange
-        { role: 'user', parts: [{ text: 'Please confirm your role and how you will help.' }] },
-        { role: 'model', parts: [{ text: SYSTEM_PROMPT }] },
-        // Previous conversation
-        ...buildHistory(history),
-      ],
+    const intent = detectIntent(message);
+
+    // Build messages array for OpenAI
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      // Include recent conversation history
+      ...history.slice(-10).map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      })),
+      { role: 'user', content: message },
+    ];
+
+    const completion = await openaiClient.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages,
+      max_tokens: 600,
+      temperature: 0.7,
     });
 
-    const result = await chat.sendMessage(message);
-    const response = result.response.text();
-    const resources = extractResources(response);
+    const response = completion.choices[0].message.content;
 
-    // If emergency detected but Gemini didn't include resources, add them
-    if (emergency && resources.length === 0) {
-      resources.push(RESOURCES.suicide, RESOURCES.crisisText, RESOURCES.emergency);
+    const isEmergency = intent === 'emergency';
+    const resources = [];
+
+    if (isEmergency || intent === 'safety_plan') {
+      resources.push({ name: 'SafeSpeak Emergency Line', contact: '+251965485715', type: 'emergency' });
+      resources.push({ name: 'Crisis Support', contact: '+251987240570', type: 'crisis' });
+      resources.push({ name: 'WhatsApp Support', contact: '+251960255733', type: 'whatsapp' });
+    } else if (intent === 'abuse_disclosure') {
+      resources.push({ name: 'SafeSpeak Emergency Line', contact: '+251965485715', type: 'emergency' });
+      resources.push({ name: 'Domestic Violence Support', contact: '+251909853958', type: 'crisis' });
+      resources.push({ name: 'Report Anonymously', contact: '/report', type: 'link' });
+    } else if (intent === 'reporting_guide') {
+      resources.push({ name: 'Start a Report', contact: '/report', type: 'link' });
+    } else if (intent === 'next_steps') {
+      resources.push({ name: 'Track Your Case', contact: '/track', type: 'link' });
+    } else {
+      resources.push({ name: 'SafeSpeak Emergency Line', contact: '+251965485715', type: 'emergency' });
     }
 
+    console.log(`🤖 OpenAI chat OK (intent: ${intent})`);
     return {
       response,
-      urgency: emergency ? 'Critical' : 'Low',
+      urgency: isEmergency ? 'Critical' : intent === 'safety_plan' ? 'High' : 'Low',
       resources,
-      isEmergency: emergency,
-      model: 'gemini-1.5-flash',
+      isEmergency,
+      intent,
+      model: 'gpt-3.5-turbo',
     };
-  } catch (err) {
-    console.error('Gemini error:', err.message);
-    // Fall back to dataset engine
-    const fallback = datasetChat(message, history);
-    return { ...fallback, model: 'dataset-fallback', error: err.message };
+  } catch (e) {
+    console.error(`⚠️  OpenAI chat error: ${e.message}`);
+    return keywordChat(message, history);
   }
 };
 
-// ── Classify with Gemini (for case reports) ───────────────────────────────────
-const geminiClassify = async (description, abuseTypes, isVictimSafe) => {
-  // Always use dataset classifier for case classification (fast + reliable)
-  // Gemini is only used for the chat interface
-  return datasetClassify(description, abuseTypes, isVictimSafe);
-};
-
-module.exports = { geminiChat, geminiClassify };
+module.exports = { classify, geminiChat };

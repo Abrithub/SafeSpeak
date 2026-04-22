@@ -203,8 +203,8 @@ const Question = () => {
               If you or someone you know is in immediate danger, please contact emergency services right away.
             </p>
             <div className="flex flex-wrap gap-4">
-              <a href="tel:+251911123456" className="text-rose-600 font-medium hover:text-rose-700">
-                📞 Emergency: +251 911 123 456
+              <a href="tel:+251965485715" className="text-rose-600 font-medium hover:text-rose-700">
+                📞 Emergency: +251 965 485 715
               </a>
               <span className="text-gray-400">|</span>
               <Link to="/report" className="text-sky-600 font-medium hover:text-sky-700">

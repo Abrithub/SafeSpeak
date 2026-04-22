@@ -8,19 +8,28 @@ import { colors, spacing, radius, font } from '../theme';
 
 const WELCOME = {
   id: 'welcome', role: 'ai',
-  text: "Hi, I'm SafeSpeak AI. I'm here to listen and help. You can tell me what's happening — everything is confidential. How can I support you today?",
+  text: "Hi 👋 I'm your SafeSpeak Mentor. I can help you:\n• Report an incident step by step\n• Understand what happens after you report\n• Stay safe right now\n• Answer any questions you have\n\nWhat do you need help with?",
 };
 
+const QUICK_PROMPTS = [
+  { label: '📋 How do I report?', text: 'How do I submit a report? Walk me through the steps.' },
+  { label: '🛡️ I need safety help', text: 'I might be in danger right now. What should I do?' },
+  { label: '🔍 Track my case', text: 'I already submitted a report. How do I track it?' },
+  { label: '😟 I\'m scared', text: "I'm scared and don't know what to do or where to start." },
+];
+
 export default function AIChatScreen() {
-  const [messages, setMessages] = useState([WELCOME]);
-  const [input, setInput]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [messages, setMessages]   = useState([WELCOME]);
+  const [input, setInput]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [showQuick, setShowQuick] = useState(true);
   const listRef = useRef(null);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (overrideText) => {
+    const text = (overrideText || input).trim();
     if (!text || loading) return;
     setInput('');
+    setShowQuick(false);
 
     const userMsg = { id: Date.now().toString(), role: 'user', text };
     const history = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.role, text: m.text }));
@@ -41,8 +50,9 @@ export default function AIChatScreen() {
     } catch {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(), role: 'ai',
-        text: "I'm having trouble connecting. If you need immediate help, please call 988 or text HOME to 741741.",
-        resources: [], isEmergency: false,
+        text: "I'm having trouble connecting. If you need immediate help, please call +251965485715.",
+        resources: [{ name: 'SafeSpeak Emergency Line', contact: '+251965485715', type: 'emergency' }],
+        isEmergency: false,
       }]);
     } finally {
       setLoading(false);
@@ -60,20 +70,20 @@ export default function AIChatScreen() {
           </View>
         )}
         <Text style={[s.bubbleText, isUser && s.userText]}>{item.text}</Text>
-        {item.resources?.length > 0 && (
-          <View style={s.resources}>
-            <Text style={s.resourcesTitle}>📞 Resources:</Text>
-            {item.resources.map((r, i) => (
-              <TouchableOpacity key={i} onPress={() => {
-                if (r.contact.startsWith('1-') || /^\d{3}$/.test(r.contact)) {
-                  Linking.openURL(`tel:${r.contact.replace(/\D/g, '')}`);
-                }
-              }}>
-                <Text style={s.resourceItem}>• {r.name}: <Text style={s.resourceContact}>{r.contact}</Text></Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+            {item.resources?.length > 0 && (
+              <View style={s.resources}>
+                <Text style={s.resourcesTitle}>Resources:</Text>
+                {item.resources.map((r, i) =>
+                  r.type === 'link' ? (
+                    <Text key={i} style={s.resourceItem}>🔗 {r.name}</Text>
+                  ) : (
+                    <TouchableOpacity key={i} onPress={() => Linking.openURL(`tel:${r.contact.replace(/\s/g, '')}`)}>
+                      <Text style={s.resourceItem}>📞 {r.name}: <Text style={s.resourceContact}>{r.contact}</Text></Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+            )}
       </View>
     );
   };

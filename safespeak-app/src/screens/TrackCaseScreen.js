@@ -160,7 +160,7 @@ export default function TrackCaseScreen({ navigation }) {
                   <Text style={s.actionBtnText}>📋 New Report</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.actionBtn, { backgroundColor: colors.teal }]}
-                  onPress={() => Linking.openURL('tel:+251911123456')}>
+                  onPress={() => Linking.openURL('tel:+251965485715')}>
                   <Text style={s.actionBtnText}>📞 Call Support</Text>
                 </TouchableOpacity>
               </View>

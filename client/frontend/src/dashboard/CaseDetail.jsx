@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   fetchCase, updateStatus, addNote, sendMessage, scheduleAppointment,
-  getCaseAppointments, assignCase, reopenCase, archiveCase,
+  getCaseAppointments, assignCase, reopenCase, archiveCase, deleteCase, referCase,
 } from "../services/api";
 import {
   FaArrowLeft, FaRobot, FaLock, FaPaperPlane, FaStickyNote,
@@ -24,12 +24,19 @@ export default function CaseDetail({ caseId, onBack }) {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [appointments, setAppointments] = useState([]);
-  const [apptForm, setApptForm] = useState({ date: "", time: "", location: "", notes: "" });
+  const [apptForm, setApptForm] = useState({ type: "police_station", date: "", time: "", location: "", stationName: "", officerName: "", officerPhone: "", courtName: "", courtRoom: "", judge: "", purpose: "", notes: "" });
   const [apptSaving, setApptSaving] = useState(false);
   const [apptError, setApptError] = useState("");
   const [assignForm, setAssignForm] = useState({ officer: "", org: "" });
   const [assignSaving, setAssignSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [referralType, setReferralType] = useState("");
+  const [referralForm, setReferralForm] = useState({
+    stationName:"", stationAddress:"", officerName:"", officerPhone:"",
+    courtName:"", courtDate:"", courtTime:"", courtRoom:"", judge:"",
+    infoRequest:"", infoDeadline:"", referralNote:"",
+  });
+  const [referralSaving, setReferralSaving] = useState(false);
 
   const load = () => Promise.all([
     fetchCase(caseId).then(d => { setC(d); setAssignForm({ officer: d.officer || "", org: d.org || "" }); }),
@@ -93,9 +100,17 @@ export default function CaseDetail({ caseId, onBack }) {
     setSaving(false);
   };
 
+  const handleReferral = async (e) => {
+    e.preventDefault();
+    if (!referralType) return;
+    setReferralSaving(true);
+    await referCase(c.caseId, { type: referralType, ...referralForm });
+    await load();
+    setReferralSaving(false);
+  };
+
   const handleScheduleAppt = async (e) => {
     e.preventDefault();
-    if (!c.reporterEmail) { setApptError("No email on file for this reporter."); return; }
     setApptSaving(true); setApptError("");
     try {
       const res = await scheduleAppointment({ caseId: c.caseId, ...apptForm });
@@ -105,7 +120,7 @@ export default function CaseDetail({ caseId, onBack }) {
     finally { setApptSaving(false); }
   };
 
-  const TABS = ["overview", "messages", "evidence", "assignment", "appointments"];
+  const TABS = ["overview", "referral", "messages", "evidence", "assignment", "appointments"];
 
   return (
     <div className="space-y-4">
@@ -181,7 +196,9 @@ export default function CaseDetail({ caseId, onBack }) {
             {t === "messages" ? `💬 Messages (${(c.messages||[]).length})` :
              t === "evidence" ? `📎 Evidence (${(c.evidence||[]).length})` :
              t === "appointments" ? `📅 Appointments (${appointments.length})` :
-             t === "assignment" ? "👤 Assignment" : "📋 Overview"}
+             t === "assignment" ? "👤 Assignment" :
+             t === "referral" ? `🔀 Refer Case${c.referral?.type ? " ✓" : ""}` :
+             "📋 Overview"}
           </button>
         ))}
       </div>
@@ -350,6 +367,185 @@ export default function CaseDetail({ caseId, onBack }) {
         </div>
       )}
 
+      {/* ── REFERRAL TAB ── */}
+      {activeTab === "referral" && (
+        <div className="space-y-4">
+          {/* Show existing referral if set */}
+          {c.referral?.type && (
+            <div className={`rounded-xl p-5 border-l-4 ${
+              c.referral.type === "police" ? "bg-blue-50 border-blue-500" :
+              c.referral.type === "court"  ? "bg-yellow-50 border-yellow-500" :
+              "bg-orange-50 border-orange-500"
+            }`}>
+              <p className="text-sm font-bold text-gray-800 mb-3">
+                {c.referral.type === "police" ? "🚔 Referred to Police Station" :
+                 c.referral.type === "court"  ? "⚖️ Referred to Court" :
+                 "📋 Information Requested"}
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                {c.referral.type === "police" && <>
+                  {c.referral.stationName    && <div><span className="text-gray-400">Station:</span> {c.referral.stationName}</div>}
+                  {c.referral.stationAddress && <div><span className="text-gray-400">Address:</span> {c.referral.stationAddress}</div>}
+                  {c.referral.officerName    && <div><span className="text-gray-400">Officer:</span> {c.referral.officerName}</div>}
+                  {c.referral.officerPhone   && <div><span className="text-gray-400">Phone:</span> {c.referral.officerPhone}</div>}
+                </>}
+                {c.referral.type === "court" && <>
+                  {c.referral.courtName && <div><span className="text-gray-400">Court:</span> {c.referral.courtName}</div>}
+                  {c.referral.courtDate && <div><span className="text-gray-400">Date:</span> {c.referral.courtDate}</div>}
+                  {c.referral.courtTime && <div><span className="text-gray-400">Time:</span> {c.referral.courtTime}</div>}
+                  {c.referral.courtRoom && <div><span className="text-gray-400">Room:</span> {c.referral.courtRoom}</div>}
+                  {c.referral.judge     && <div><span className="text-gray-400">Judge:</span> {c.referral.judge}</div>}
+                </>}
+                {c.referral.type === "info_request" && <>
+                  {c.referral.infoRequest  && <div className="col-span-2"><span className="text-gray-400">Requested:</span> {c.referral.infoRequest}</div>}
+                  {c.referral.infoDeadline && <div><span className="text-gray-400">Deadline:</span> {c.referral.infoDeadline}</div>}
+                </>}
+              </div>
+              {c.referral.referralNote && (
+                <p className="text-xs text-gray-600 mt-2 bg-white rounded p-2">{c.referral.referralNote}</p>
+              )}
+              <p className="text-[10px] text-gray-400 mt-2">
+                Referred by {c.referral.referredBy} · {c.referral.referredAt ? new Date(c.referral.referredAt).toLocaleString() : ""}
+              </p>
+            </div>
+          )}
+
+          {/* Referral form */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <h3 className="font-semibold text-gray-700 text-sm mb-4">
+              {c.referral?.type ? "Update Referral" : "Refer This Case"}
+            </h3>
+
+            {/* Type selector */}
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              {[
+                { key: "police", icon: "🚔", label: "Police Station", color: "border-blue-400 bg-blue-50 text-blue-700" },
+                { key: "court",  icon: "⚖️", label: "Court",          color: "border-yellow-400 bg-yellow-50 text-yellow-700" },
+                { key: "info_request", icon: "📋", label: "Need More Info", color: "border-orange-400 bg-orange-50 text-orange-700" },
+              ].map(opt => (
+                <button key={opt.key} type="button"
+                  onClick={() => setReferralType(opt.key)}
+                  className={`border-2 rounded-xl p-3 text-center transition ${
+                    referralType === opt.key ? opt.color + " border-2" : "border-gray-200 hover:border-gray-300"
+                  }`}>
+                  <div className="text-2xl mb-1">{opt.icon}</div>
+                  <div className="text-xs font-semibold">{opt.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {referralType && (
+              <form onSubmit={handleReferral} className="space-y-3">
+                {/* Police fields */}
+                {referralType === "police" && <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Station Name <span className="text-red-500">*</span></label>
+                      <input value={referralForm.stationName} onChange={e => setReferralForm({...referralForm, stationName: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="e.g. Bole Police Station" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Station Address</label>
+                      <input value={referralForm.stationAddress} onChange={e => setReferralForm({...referralForm, stationAddress: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="Full address" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Assigned Officer</label>
+                      <input value={referralForm.officerName} onChange={e => setReferralForm({...referralForm, officerName: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="Officer name" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Officer Phone</label>
+                      <input value={referralForm.officerPhone} onChange={e => setReferralForm({...referralForm, officerPhone: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="+251 9xx xxx xxx" />
+                    </div>
+                  </div>
+                </>}
+
+                {/* Court fields */}
+                {referralType === "court" && <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="text-xs text-gray-500 block mb-1">Court Name <span className="text-red-500">*</span></label>
+                      <input value={referralForm.courtName} onChange={e => setReferralForm({...referralForm, courtName: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="e.g. Addis Ababa Federal High Court" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Court Date <span className="text-red-500">*</span></label>
+                      <input type="date" value={referralForm.courtDate} onChange={e => setReferralForm({...referralForm, courtDate: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Court Time <span className="text-red-500">*</span></label>
+                      <input type="time" value={referralForm.courtTime} onChange={e => setReferralForm({...referralForm, courtTime: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Court Room / Hall</label>
+                      <input value={referralForm.courtRoom} onChange={e => setReferralForm({...referralForm, courtRoom: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="e.g. Hall 3" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Judge Name</label>
+                      <input value={referralForm.judge} onChange={e => setReferralForm({...referralForm, judge: e.target.value})}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="Judge name (optional)" />
+                    </div>
+                  </div>
+                </>}
+
+                {/* Info request fields */}
+                {referralType === "info_request" && <>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">What information is needed? <span className="text-red-500">*</span></label>
+                    <textarea value={referralForm.infoRequest} onChange={e => setReferralForm({...referralForm, infoRequest: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      rows={3} placeholder="Describe what additional information is needed from the reporter..." required />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Response Deadline</label>
+                    <input type="date" value={referralForm.infoDeadline} onChange={e => setReferralForm({...referralForm, infoDeadline: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  </div>
+                </>}
+
+                {/* Common note */}
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Note to Reporter (optional)</label>
+                  <textarea value={referralForm.referralNote} onChange={e => setReferralForm({...referralForm, referralNote: e.target.value})}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1a2340]"
+                    rows={2} placeholder="Any additional instructions or context for the reporter..." />
+                </div>
+
+                {!c.reporterEmail && (
+                  <p className="text-xs text-red-500 bg-red-50 p-2 rounded-lg">
+                    ⚠️ No email on file — reporter will not receive an email notification.
+                  </p>
+                )}
+
+                <button type="submit" disabled={referralSaving}
+                  className={`w-full py-2.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-50 ${
+                    referralType === "police" ? "bg-blue-600 hover:bg-blue-700" :
+                    referralType === "court"  ? "bg-yellow-600 hover:bg-yellow-700" :
+                    "bg-orange-600 hover:bg-orange-700"
+                  }`}>
+                  {referralSaving ? "Sending..." :
+                   referralType === "police" ? "🚔 Refer to Police & Notify Reporter" :
+                   referralType === "court"  ? "⚖️ Schedule Court Date & Notify Reporter" :
+                   "📋 Request Information & Notify Reporter"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── ASSIGNMENT TAB ── */}
       {activeTab === "assignment" && (
         <div className="bg-white rounded-xl shadow-sm p-5 max-w-lg">
@@ -387,53 +583,225 @@ export default function CaseDetail({ caseId, onBack }) {
 
       {/* ── APPOINTMENTS TAB ── */}
       {activeTab === "appointments" && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
+          {/* Schedule form */}
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-gray-700 text-sm mb-4 flex items-center gap-2">
               <FaCalendarAlt className="text-blue-500" /> Schedule Appointment
             </h3>
-            {c.reporterEmail ? (
-              <p className="text-[10px] text-gray-400 mb-3">Notifying: <span className="font-medium text-gray-600">{c.reporterEmail}</span></p>
-            ) : (
-              <p className="text-[10px] text-red-400 mb-3">No email on file — reporter did not provide email.</p>
-            )}
-            <form onSubmit={handleScheduleAppt} className="space-y-2">
-              <input type="date" value={apptForm.date} onChange={(e) => setApptForm({...apptForm, date: e.target.value})}
-                className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
-              <input type="time" value={apptForm.time} onChange={(e) => setApptForm({...apptForm, time: e.target.value})}
-                className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
-              <input type="text" value={apptForm.location} onChange={(e) => setApptForm({...apptForm, location: e.target.value})}
-                className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Office address or location" required />
-              <textarea value={apptForm.notes} onChange={(e) => setApptForm({...apptForm, notes: e.target.value})}
-                className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Additional notes (optional)" rows={2} />
+            {c.reporterEmail
+              ? <p className="text-[10px] text-gray-400 mb-3">Email notification will be sent to: <span className="font-medium text-gray-600">{c.reporterEmail}</span></p>
+              : <p className="text-[10px] text-orange-500 mb-3">⚠️ No email on file — appointment will appear in My Cases but no email will be sent.</p>
+            }
+            <form onSubmit={handleScheduleAppt} className="space-y-3">
+              {/* Type */}
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Appointment Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { v: "police_station", icon: "🚔", label: "Police Station" },
+                    { v: "court",          icon: "⚖️", label: "Court" },
+                    { v: "safespeak_office", icon: "🏢", label: "Office" },
+                  ].map(opt => (
+                    <button key={opt.v} type="button"
+                      onClick={() => setApptForm({...apptForm, type: opt.v})}
+                      className={`border rounded-lg p-2 text-center text-xs transition ${
+                        apptForm.type === opt.v ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold" : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <div className="text-lg mb-0.5">{opt.icon}</div>{opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date / Time / Location */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Date *</label>
+                  <input type="date" value={apptForm.date} onChange={e => setApptForm({...apptForm, date: e.target.value})}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Time *</label>
+                  <input type="time" value={apptForm.time} onChange={e => setApptForm({...apptForm, time: e.target.value})}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Location / Address *</label>
+                <input type="text" value={apptForm.location} onChange={e => setApptForm({...apptForm, location: e.target.value})}
+                  className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Full address" required />
+              </div>
+
+              {/* Police fields */}
+              {apptForm.type === "police_station" && (
+                <div className="grid grid-cols-2 gap-2 p-3 bg-blue-50 rounded-lg">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Station Name</label>
+                    <input value={apptForm.stationName||""} onChange={e => setApptForm({...apptForm, stationName: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="e.g. Bole Police Station" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Officer Name</label>
+                    <input value={apptForm.officerName||""} onChange={e => setApptForm({...apptForm, officerName: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Officer name" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-500 block mb-1">Officer Phone</label>
+                    <input value={apptForm.officerPhone||""} onChange={e => setApptForm({...apptForm, officerPhone: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="+251 9xx xxx xxx" />
+                  </div>
+                </div>
+              )}
+
+              {/* Court fields */}
+              {apptForm.type === "court" && (
+                <div className="grid grid-cols-2 gap-2 p-3 bg-yellow-50 rounded-lg">
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-500 block mb-1">Court Name</label>
+                    <input value={apptForm.courtName||""} onChange={e => setApptForm({...apptForm, courtName: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="e.g. Addis Ababa Federal High Court" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Room / Hall</label>
+                    <input value={apptForm.courtRoom||""} onChange={e => setApptForm({...apptForm, courtRoom: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="e.g. Hall 3" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Judge</label>
+                    <input value={apptForm.judge||""} onChange={e => setApptForm({...apptForm, judge: e.target.value})}
+                      className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="Judge name" />
+                  </div>
+                </div>
+              )}
+
+              {/* Purpose */}
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">What to bring / What to expect</label>
+                <textarea value={apptForm.purpose||""} onChange={e => setApptForm({...apptForm, purpose: e.target.value})}
+                  className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="e.g. Bring valid ID, case documents, witness names..." rows={2} />
+              </div>
+
               {apptError && <p className="text-red-500 text-[10px]">{apptError}</p>}
               <button type="submit" disabled={apptSaving}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
-                {apptSaving ? "Scheduling..." : "Schedule & Notify Reporter"}
+                className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">
+                {apptSaving ? "Scheduling..." : "📅 Schedule & Notify Reporter"}
               </button>
             </form>
           </div>
 
+          {/* Appointments list with outcome recording */}
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3">Scheduled Appointments</h3>
+            <h3 className="font-semibold text-gray-700 text-sm mb-3">Appointment History</h3>
             {appointments.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-8">No appointments yet.</p>
             ) : (
-              <div className="space-y-3">
-                {appointments.map((a) => (
-                  <div key={a._id} className="bg-blue-50 rounded-lg p-3 text-xs">
-                    <p className="font-semibold text-blue-700">{a.date} at {a.time}</p>
-                    <p className="text-gray-600 mt-1">📍 {a.location}</p>
-                    {a.notes && <p className="text-gray-500 mt-1">{a.notes}</p>}
-                    <span className={`inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full ${
-                      a.status === "Scheduled" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
-                    }`}>{a.status}</span>
-                  </div>
+              <div className="space-y-4">
+                {appointments.map(a => (
+                  <AppointmentCard key={a._id} appt={a} caseId={c.caseId} onUpdate={load} />
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Appointment card with outcome recording ───────────────────────────────────
+function AppointmentCard({ appt, caseId, onUpdate }) {
+  const [showOutcome, setShowOutcome] = useState(false);
+  const [outcome, setOutcome]         = useState(appt.outcome || "pending");
+  const [outcomeNote, setOutcomeNote] = useState(appt.outcomeNote || "");
+  const [saving, setSaving]           = useState(false);
+  const { updateAppointmentOutcome }  = require ? {} : {};
+
+  const saveOutcome = async () => {
+    setSaving(true);
+    await fetch(`/api/appointments/${appt._id}/outcome`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: JSON.stringify({ outcome, outcomeNote }),
+    });
+    await onUpdate();
+    setSaving(false);
+    setShowOutcome(false);
+  };
+
+  const typeIcon = appt.type === "court" ? "⚖️" : appt.type === "safespeak_office" ? "🏢" : "🚔";
+  const outcomeColors = {
+    pending:         "bg-gray-100 text-gray-600",
+    resolved:        "bg-green-100 text-green-700",
+    proceed_to_court:"bg-yellow-100 text-yellow-700",
+    needs_more_info: "bg-blue-100 text-blue-700",
+    dismissed:       "bg-red-100 text-red-600",
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-xl p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-xs font-bold text-gray-700">{typeIcon} {appt.date} at {appt.time}</p>
+          <p className="text-xs text-gray-500 mt-0.5">📍 {appt.location}</p>
+          {appt.stationName  && <p className="text-xs text-gray-500">🏢 {appt.stationName}</p>}
+          {appt.officerName  && <p className="text-xs text-gray-500">👮 {appt.officerName} {appt.officerPhone ? `· ${appt.officerPhone}` : ""}</p>}
+          {appt.courtName    && <p className="text-xs text-gray-500">⚖️ {appt.courtName} {appt.courtRoom ? `· ${appt.courtRoom}` : ""}</p>}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+            appt.status === "Scheduled" ? "bg-blue-100 text-blue-600" :
+            appt.status === "Completed" ? "bg-green-100 text-green-600" :
+            appt.status === "Cancelled" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"
+          }`}>{appt.status}</span>
+          {appt.outcome !== "pending" && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${outcomeColors[appt.outcome]}`}>
+              {appt.outcome.replace(/_/g," ")}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {appt.outcomeNote && (
+        <p className="text-xs text-gray-600 bg-gray-50 rounded p-2 mb-2">{appt.outcomeNote}</p>
+      )}
+
+      {/* Record outcome button */}
+      {appt.status !== "Cancelled" && (
+        <button onClick={() => setShowOutcome(!showOutcome)}
+          className="text-xs text-blue-600 hover:underline">
+          {appt.outcome === "pending" ? "📝 Record Outcome" : "✏️ Update Outcome"}
+        </button>
+      )}
+
+      {showOutcome && (
+        <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
+          <label className="text-xs text-gray-500 block">Outcome</label>
+          <select value={outcome} onChange={e => setOutcome(e.target.value)}
+            className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="pending">Pending</option>
+            <option value="resolved">✅ Resolved — Case Closed</option>
+            <option value="proceed_to_court">⚖️ Proceed to Court</option>
+            <option value="needs_more_info">📋 Needs More Information</option>
+            <option value="dismissed">❌ Dismissed</option>
+          </select>
+          <textarea value={outcomeNote} onChange={e => setOutcomeNote(e.target.value)}
+            className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Explain the outcome to the reporter..." rows={2} />
+          <div className="flex gap-2">
+            <button onClick={saveOutcome} disabled={saving}
+              className="flex-1 bg-[#1a2340] text-white py-1.5 rounded-lg text-xs font-medium hover:bg-[#243060] disabled:opacity-50">
+              {saving ? "Saving..." : "Save & Notify Reporter"}
+            </button>
+            <button onClick={() => setShowOutcome(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2">Cancel</button>
           </div>
         </div>
       )}

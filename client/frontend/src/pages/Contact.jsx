@@ -151,9 +151,9 @@ const Contact = () => {
       title: 'Messaging Apps',
       description: 'Chat with us on your favorite app',
       details: [
-        { label: 'WhatsApp', value: '+251 911 123 456', link: 'https://wa.me/251911123456' },
+        { label: 'WhatsApp', sub: '+251 960 255 733', url: 'https://wa.me/251960255733' },
         { label: 'Telegram', value: '@safespeak_support', link: 'https://t.me/safespeak_support' },
-        { label: 'Signal', value: '+251 911 123 456' }
+        { label: 'Signal', value: '+251 986 197 824' }
       ]
     },
     {

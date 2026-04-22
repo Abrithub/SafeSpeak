@@ -249,9 +249,9 @@ export default function HowToReportScreen({ navigation }) {
         <Text style={s.sectionTitle}>📞 Need Immediate Help?</Text>
         <View style={s.contactRow}>
           {[
-            { e: '📞', l: 'Call', u: 'tel:+251911123456', c: '#fee2e2' },
+            { e: '📞', l: 'Call', u: 'tel:+251965485715', c: '#fee2e2' },
             { e: '✉️', l: 'Email', u: 'mailto:support@safespeak.org', c: '#dcfce7' },
-            { e: '💬', l: 'WhatsApp', u: 'https://wa.me/251911123456', c: '#e0f2fe' },
+            { e: '💬', l: 'WhatsApp', u: 'https://wa.me/251960255733', c: '#e0f2fe' },
           ].map(({ e, l, u, c }) => (
             <TouchableOpacity key={l} style={[s.contactBtn, { backgroundColor: c }]}
               onPress={() => Linking.openURL(u)}>

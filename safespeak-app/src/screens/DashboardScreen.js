@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Modal, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchCases, updateStatus, addNote, sendAdminMessage, fetchStats } from '../services/api';
+import { fetchCases, updateStatus, addNote, sendAdminMessage, fetchStats, BASE_URL } from '../services/api';
+
+const scheduleAppointment = async (data) => {
+  const token = await AsyncStorage.getItem('token');
+  return fetch(`${BASE_URL}/appointments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  }).then(r => r.json());
+};
+
+const referCaseAPI = async (caseId, data) => {
+  const token = await AsyncStorage.getItem('token');
+  return fetch(`${BASE_URL}/cases/${caseId}/refer`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  }).then(r => r.json());
+};
 
 const statusColor = {
   'Pending': '#f59e0b', 'Under Review': '#3b82f6',
@@ -30,6 +48,14 @@ export default function DashboardScreen({ navigation }) {
   const [user, setUser]         = useState({});
   const [notifOpen, setNotifOpen] = useState(false);
   const [filterUrgency, setFilterUrgency] = useState('All');
+
+  // Appointment modal state
+  const [apptModal, setApptModal] = useState(false);
+  const [appt, setAppt] = useState({ type: 'police_station', date: '', time: '', location: '', stationName: '', officerName: '', officerPhone: '', courtName: '', courtRoom: '', judge: '', purpose: '' });
+
+  // Referral modal state
+  const [referModal, setReferModal] = useState(false);
+  const [refer, setRefer] = useState({ type: 'police', stationName: '', stationAddress: '', officerName: '', officerPhone: '', referralNote: '' });
 
   const load = async () => {
     const u = JSON.parse(await AsyncStorage.getItem('currentUser') || '{}');
@@ -72,6 +98,36 @@ export default function DashboardScreen({ navigation }) {
     await sendAdminMessage(caseId, msg.trim());
     setMsg('');
     await load();
+    setSaving(false);
+  };
+
+  const handleScheduleAppt = async (caseId) => {
+    if (!appt.date || !appt.time || !appt.location) {
+      Alert.alert('Required', 'Please fill in date, time, and location'); return;
+    }
+    setSaving(true);
+    try {
+      await scheduleAppointment({ ...appt, caseId });
+      setApptModal(false);
+      setAppt({ type: 'police_station', date: '', time: '', location: '', stationName: '', officerName: '', officerPhone: '', courtName: '', courtRoom: '', judge: '', purpose: '' });
+      await load();
+      Alert.alert('✅ Done', 'Appointment scheduled and reporter notified by email.');
+    } catch { Alert.alert('Error', 'Failed to schedule appointment'); }
+    setSaving(false);
+  };
+
+  const handleRefer = async (caseId) => {
+    if (!refer.stationName && refer.type === 'police') {
+      Alert.alert('Required', 'Please enter station name'); return;
+    }
+    setSaving(true);
+    try {
+      await referCaseAPI(caseId, refer);
+      setReferModal(false);
+      setRefer({ type: 'police', stationName: '', stationAddress: '', officerName: '', officerPhone: '', referralNote: '' });
+      await load();
+      Alert.alert('✅ Done', 'Case referred and reporter notified.');
+    } catch { Alert.alert('Error', 'Failed to refer case'); }
     setSaving(false);
   };
 
@@ -151,6 +207,7 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+        {/* Message Reporter */}
         <View style={st.card}>
           <Text style={st.cardTitle}>💬 Message Reporter</Text>
           <View style={st.msgList}>
@@ -168,7 +225,119 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
-        <View style={{ height: 40 }} />
+
+        {/* Action buttons */}
+        <View style={st.card}>
+          <Text style={st.cardTitle}>⚡ Actions</Text>          <View style={st.actionBtns}>
+            <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#3b82f6' }]} onPress={() => setApptModal(true)}>
+              <Text style={st.actionBtnText}>📅 Schedule Appointment</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#8b5cf6' }]} onPress={() => setReferModal(true)}>
+              <Text style={st.actionBtnText}>🚔 Refer / Assign Officer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Schedule Appointment Modal */}
+        <Modal visible={apptModal} transparent animationType="slide" onRequestClose={() => setApptModal(false)}>
+          <View style={st.modalBg2}>
+            <ScrollView style={st.modalSheet} keyboardShouldPersistTaps="handled">
+              <Text style={st.modalTitle}>📅 Schedule Appointment</Text>
+              <Text style={st.mLabel}>Type</Text>
+              <View style={st.radioRow}>
+                {[['police_station','🚔 Police'],['court','⚖️ Court'],['safespeak_office','🏢 Office']].map(([v,l]) => (
+                  <TouchableOpacity key={v} onPress={() => setAppt(a => ({ ...a, type: v }))}
+                    style={[st.radioBtn, appt.type === v && st.radioBtnActive]}>
+                    <Text style={[st.radioText, appt.type === v && { color: '#fff' }]}>{l}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {[['date','Date (e.g. 2025-05-20)'],['time','Time (e.g. 10:00 AM)'],['location','Location / Address']].map(([k,p]) => (
+                <View key={k}>
+                  <Text style={st.mLabel}>{p} *</Text>
+                  <TextInput style={st.mInput} placeholder={p} value={appt[k]} onChangeText={v => setAppt(a => ({ ...a, [k]: v }))} placeholderTextColor="#9ca3af" />
+                </View>
+              ))}
+              {appt.type === 'police_station' && [['stationName','Station Name'],['officerName','Officer Name'],['officerPhone','Officer Phone']].map(([k,p]) => (
+                <View key={k}>
+                  <Text style={st.mLabel}>{p}</Text>
+                  <TextInput style={st.mInput} placeholder={p} value={appt[k]} onChangeText={v => setAppt(a => ({ ...a, [k]: v }))} placeholderTextColor="#9ca3af" />
+                </View>
+              ))}
+              {appt.type === 'court' && [['courtName','Court Name'],['courtRoom','Room / Hall'],['judge','Judge Name']].map(([k,p]) => (
+                <View key={k}>
+                  <Text style={st.mLabel}>{p}</Text>
+                  <TextInput style={st.mInput} placeholder={p} value={appt[k]} onChangeText={v => setAppt(a => ({ ...a, [k]: v }))} placeholderTextColor="#9ca3af" />
+                </View>
+              ))}
+              <Text style={st.mLabel}>What to bring / Purpose</Text>
+              <TextInput style={[st.mInput, { height: 80 }]} placeholder="e.g. Bring valid ID" value={appt.purpose}
+                onChangeText={v => setAppt(a => ({ ...a, purpose: v }))} multiline textAlignVertical="top" placeholderTextColor="#9ca3af" />
+              <View style={st.modalBtns}>
+                <TouchableOpacity style={st.modalCancelBtn} onPress={() => setApptModal(false)}>
+                  <Text style={st.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[st.modalConfirmBtn, saving && { opacity: 0.6 }]}
+                  onPress={() => handleScheduleAppt(selectedCase.caseId)} disabled={saving}>
+                  <Text style={st.modalConfirmText}>{saving ? 'Scheduling...' : 'Schedule & Notify'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </Modal>
+
+        {/* Refer / Assign Officer Modal */}
+        <Modal visible={referModal} transparent animationType="slide" onRequestClose={() => setReferModal(false)}>
+          <View style={st.modalBg2}>
+            <ScrollView style={st.modalSheet} keyboardShouldPersistTaps="handled">
+              <Text style={st.modalTitle}>🚔 Refer Case / Assign Officer</Text>
+              <Text style={st.mLabel}>Referral Type</Text>
+              <View style={st.radioRow}>
+                {[['police','🚔 Police'],['court','⚖️ Court'],['info_request','📋 Info Request']].map(([v,l]) => (
+                  <TouchableOpacity key={v} onPress={() => setRefer(r => ({ ...r, type: v }))}
+                    style={[st.radioBtn, refer.type === v && st.radioBtnActive]}>
+                    <Text style={[st.radioText, refer.type === v && { color: '#fff' }]}>{l}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {refer.type === 'police' && [['stationName','Station Name *'],['stationAddress','Station Address'],['officerName','Officer Name'],['officerPhone','Officer Phone']].map(([k,p]) => (
+                <View key={k}>
+                  <Text style={st.mLabel}>{p}</Text>
+                  <TextInput style={st.mInput} placeholder={p.replace(' *','')} value={refer[k] || ''} onChangeText={v => setRefer(r => ({ ...r, [k]: v }))} placeholderTextColor="#9ca3af" />
+                </View>
+              ))}
+              {refer.type === 'court' && [['courtName','Court Name'],['courtDate','Court Date'],['courtTime','Court Time'],['courtRoom','Room'],['judge','Judge']].map(([k,p]) => (
+                <View key={k}>
+                  <Text style={st.mLabel}>{p}</Text>
+                  <TextInput style={st.mInput} placeholder={p} value={refer[k] || ''} onChangeText={v => setRefer(r => ({ ...r, [k]: v }))} placeholderTextColor="#9ca3af" />
+                </View>
+              ))}
+              {refer.type === 'info_request' && <>
+                <Text style={st.mLabel}>Information Required</Text>
+                <TextInput style={[st.mInput, { height: 80 }]} placeholder="What info is needed?"
+                  value={refer.infoRequest || ''} onChangeText={v => setRefer(r => ({ ...r, infoRequest: v }))} multiline textAlignVertical="top" placeholderTextColor="#9ca3af" />
+                <Text style={st.mLabel}>Deadline</Text>
+                <TextInput style={st.mInput} placeholder="e.g. 2025-05-25" value={refer.infoDeadline || ''} onChangeText={v => setRefer(r => ({ ...r, infoDeadline: v }))} placeholderTextColor="#9ca3af" />
+              </>}
+              <Text style={st.mLabel}>Note to Reporter</Text>
+              <TextInput style={[st.mInput, { height: 80 }]} placeholder="Optional note"
+                value={refer.referralNote} onChangeText={v => setRefer(r => ({ ...r, referralNote: v }))} multiline textAlignVertical="top" placeholderTextColor="#9ca3af" />
+              <View style={st.modalBtns}>
+                <TouchableOpacity style={st.modalCancelBtn} onPress={() => setReferModal(false)}>
+                  <Text style={st.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[st.modalConfirmBtn, { backgroundColor: '#8b5cf6' }, saving && { opacity: 0.6 }]}
+                  onPress={() => handleRefer(selectedCase.caseId)} disabled={saving}>
+                  <Text style={st.modalConfirmText}>{saving ? 'Referring...' : 'Refer & Notify'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </Modal>
+
+        <View style={{ height: 80 }} />
       </ScrollView>
     );
   }
@@ -532,4 +701,22 @@ const st = StyleSheet.create({
   settingLabel:     { fontSize: 13, color: '#6b7280' },
   settingVal:       { fontSize: 13, fontWeight: '600', color: '#374151' },
   settingNote:      { fontSize: 12, color: '#6b7280', lineHeight: 18 },
+  // Action + modal styles
+  actionBtns:       { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  actionBtn:        { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', minWidth: '45%' },
+  actionBtnText:    { color: '#fff', fontWeight: '700', fontSize: 12 },
+  modalBg2:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet:       { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' },
+  modalTitle:       { fontSize: 18, fontWeight: 'bold', color: '#1a2340', marginBottom: 16 },
+  mLabel:           { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4, marginTop: 10 },
+  mInput:           { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#374151', backgroundColor: '#f9fafb' },
+  radioRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  radioBtn:         { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#f9fafb' },
+  radioBtnActive:   { backgroundColor: '#1a2340', borderColor: '#1a2340' },
+  radioText:        { fontSize: 12, color: '#374151' },
+  modalBtns:        { flexDirection: 'row', gap: 10, marginTop: 20 },
+  modalCancelBtn:   { flex: 1, paddingVertical: 13, borderRadius: 10, borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center' },
+  modalCancelText:  { color: '#6b7280', fontWeight: '600' },
+  modalConfirmBtn:  { flex: 2, paddingVertical: 13, borderRadius: 10, backgroundColor: '#3b82f6', alignItems: 'center' },
+  modalConfirmText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 });

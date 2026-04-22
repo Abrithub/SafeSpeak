@@ -44,8 +44,8 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={s.urgentTitle}>Call For Urgent Help</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('tel:+251911123456')}>
-                <Text style={s.urgentPhone}>+251 911 123 456</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('tel:+251965485715')}>
+                <Text style={s.urgentPhone}>+251 965 485 715</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -65,7 +65,7 @@ export default function HomeScreen() {
           <View style={s.callContent}>
             <Text style={s.callTitle}>Prefer to speak directly?</Text>
             <Text style={s.callSub}>Our Call Center is available 24/7 for immediate help.</Text>
-            <TouchableOpacity style={s.callBtn} onPress={() => Linking.openURL('tel:+251911123456')}>
+            <TouchableOpacity style={s.callBtn} onPress={() => Linking.openURL('tel:+251965485715')}>
               <Text style={s.callBtnText}>📞 Call Now</Text>
             </TouchableOpacity>
           </View>
@@ -113,7 +113,7 @@ export default function HomeScreen() {
         <View style={s.section}>
           <Text style={s.sectionLabel}>REACH US</Text>
           <Text style={s.sectionTitle}>Contact Us</Text>
-          {[['📞','Call Us','+251 911 123 456','tel:+251911123456'],['✉️','Email Us','support@safespeak.org','mailto:support@safespeak.org'],['💬','WhatsApp','Chat with us','https://wa.me/251911123456']].map(([e,t,sub,url]) => (
+          {[['📞','Call Us','+251 965 485 715','tel:+251965485715'],['✉️','Email Us','support@safespeak.org','mailto:support@safespeak.org'],['💬','WhatsApp','Chat with us','https://wa.me/251960255733']].map(([e,t,sub,url]) => (
             <TouchableOpacity key={t} style={s.contactRow} onPress={() => Linking.openURL(url)}>
               <View style={s.contactIconBox}><Text style={s.contactEmoji}>{e}</Text></View>
               <View style={s.contactText}>

@@ -34,9 +34,9 @@ const RESOURCES = [
     id: 'messaging', icon: '💬', title: 'Messaging Apps',
     desc: 'Chat with us on your favorite app',
     links: [
-      { label: 'WhatsApp', sub: '+251 911 123 456', url: 'https://wa.me/251911123456' },
+      { label: 'WhatsApp', sub: '+251 960 255 733', url: 'https://wa.me/251960255733' },
       { label: 'Telegram', sub: '@safespeak_support', url: 'https://t.me/safespeak_support' },
-      { label: 'Signal', sub: '+251 911 123 456', url: 'sms:+251911123456' },
+      { label: 'Signal', sub: '+251 986 197 824', url: 'sms:+251986197824' },
     ],
   },
   {
@@ -53,7 +53,7 @@ const SOCIAL = [
   { icon: '🐦', name: 'Twitter', url: 'https://twitter.com' },
   { icon: '📘', name: 'Facebook', url: 'https://facebook.com' },
   { icon: '✈️', name: 'Telegram', url: 'https://t.me/safespeak_support' },
-  { icon: '💬', name: 'WhatsApp', url: 'https://wa.me/251911123456' },
+  { icon: '💬', name: 'WhatsApp', url: 'https://wa.me/251960255733' },
 ];
 
 export default function ContactScreen() {

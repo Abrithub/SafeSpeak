@@ -71,8 +71,9 @@ const Navbar = () => {
                 <div className="grid grid-cols-2 gap-6 p-6">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">📞 Call Support</h3>
-                    <a href="tel:+251911123456" className="block text-sky-500 text-sm hover:underline mb-1">+251 911 123 456</a>
-                    <a href="tel:+251922654321" className="block text-sky-500 text-sm hover:underline mb-1">+251 922 654 321</a>
+                    <a href="tel:+251965485715" className="block text-sky-500 text-sm hover:underline mb-1">+251 965 485 715</a>
+                    <a href="tel:+251987240570" className="block text-sky-500 text-sm hover:underline mb-1">+251 987 240 570</a>
+                    <a href="tel:+251909853958" className="block text-sky-500 text-sm hover:underline mb-1">+251 909 853 958</a>
                     <p className="text-xs text-gray-500 mt-2">24/7 emergency response available</p>
                   </div>
                   <div>
@@ -82,12 +83,12 @@ const Navbar = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">💬 Messaging</h3>
-                    <a href="https://wa.me/251911123456" target="_blank" rel="noopener noreferrer" className="block text-sky-500 text-sm hover:underline mb-1">WhatsApp Chat</a>
+                    <a href="https://wa.me/251960255733" target="_blank" rel="noopener noreferrer" className="block text-sky-500 text-sm hover:underline mb-1">WhatsApp Chat</a>
                     <a href="https://t.me/safespeak_support" target="_blank" rel="noopener noreferrer" className="block text-sky-500 text-sm hover:underline">Telegram Support</a>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">📩 SMS</h3>
-                    <a href="sms:+251911123456" className="block text-sky-500 text-sm hover:underline">Send SMS Message</a>
+                    <a href="sms:+251960255733" className="block text-sky-500 text-sm hover:underline">Send SMS Message</a>
                     <p className="text-xs text-gray-500 mt-2">Fast response within minutes</p>
                   </div>
                 </div>

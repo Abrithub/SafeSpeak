@@ -19,6 +19,12 @@ export const registerUser = (username, password, email = "") =>
     body: JSON.stringify({ username, password, email }),
   }).then((r) => r.json());
 
+export const googleAuth = (credential) =>
+  fetch(`${BASE}/auth/google`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  }).then((r) => r.json());
+
 export const registerAdmin = (username, password, secretKey, email = "") =>
   fetch(`${BASE}/auth/admin/register`, {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -42,7 +48,7 @@ export const submitReport = (formData) =>
   fetch(`${BASE}/cases`, {
     method: "POST",
     // No Content-Type header — let browser set multipart boundary for FormData
-    headers: headers(false),
+    headers: headers(true),  // send token if logged in
     body: formData,
   }).then((r) => r.json());
 
@@ -57,6 +63,13 @@ export const scheduleAppointment = (data) =>
     method: "POST",
     headers: { ...headers(true), "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  }).then((r) => r.json());
+
+export const updateAppointmentOutcome = (id, outcome, outcomeNote) =>
+  fetch(`${BASE}/appointments/${id}/outcome`, {
+    method: "PATCH",
+    headers: { ...headers(true), "Content-Type": "application/json" },
+    body: JSON.stringify({ outcome, outcomeNote }),
   }).then((r) => r.json());
 
 export const getCaseAppointments = (caseId) =>
@@ -122,6 +135,46 @@ export const bulkUpdateStatus = (caseIds, status) =>
     method: "PATCH",
     headers: { ...headers(true), "Content-Type": "application/json" },
     body: JSON.stringify({ caseIds, status }),
+  }).then((r) => r.json());
+
+export const deleteCase = (id) =>
+  fetch(`${BASE}/cases/${id}`, {
+    method: "DELETE",
+    headers: headers(true),
+  }).then((r) => r.json());
+
+export const exportCasesCSV = () =>
+  fetch(`${BASE}/cases/export/csv`, { headers: headers(true) })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `safespeak-cases-${Date.now()}.csv`;
+      a.click();
+    });
+
+export const changePassword = (currentPassword, newPassword) =>
+  fetch(`${BASE}/auth/change-password`, {
+    method: "PATCH",
+    headers: { ...headers(true), "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  }).then((r) => r.json());
+
+export const listUsers = () =>
+  fetch(`${BASE}/auth/users`, { headers: headers(true) }).then((r) => r.json());
+
+export const deleteUser = (id) =>
+  fetch(`${BASE}/auth/users/${id}`, {
+    method: "DELETE",
+    headers: headers(true),
+  }).then((r) => r.json());
+
+export const referCase = (id, referralData) =>
+  fetch(`${BASE}/cases/${id}/refer`, {
+    method: "PATCH",
+    headers: { ...headers(true), "Content-Type": "application/json" },
+    body: JSON.stringify(referralData),
   }).then((r) => r.json());
 
 export const getMyCases = () =>

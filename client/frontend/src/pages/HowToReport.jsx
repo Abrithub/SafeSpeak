@@ -417,9 +417,9 @@ export default function HowToReport() {
           <h2 className="text-xl font-bold text-gray-800 mb-4">Need Immediate Help?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { icon: <FaPhone className="text-rose-500" />, bg: 'bg-rose-50', label: 'Call Us', sub: '24/7 Support', href: 'tel:+251911123456' },
+              { icon: <FaPhone className="text-rose-500" />, bg: 'bg-rose-50', label: 'Call Us', sub: '+251 965 485 715', href: 'tel:+251965485715' },
               { icon: <FaEnvelope className="text-green-500" />, bg: 'bg-green-50', label: 'Email Us', sub: 'support@safespeak.org', href: 'mailto:support@safespeak.org' },
-              { icon: <FaComments className="text-sky-500" />, bg: 'bg-sky-50', label: 'WhatsApp', sub: 'Chat with us', href: 'https://wa.me/251911123456' },
+              { icon: <FaComments className="text-sky-500" />, bg: 'bg-sky-50', label: 'WhatsApp', sub: 'Chat with us', href: 'https://wa.me/251960255733' },
             ].map(({ icon, bg, label, sub, href }) => (
               <a key={label} href={href} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-sky-200 hover:shadow-sm transition">

@@ -14,6 +14,10 @@ const ORIGINS = [
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:5176",
+  "http://192.168.197.165:5173",
+  "http://192.168.197.165:8081",
+  "http://192.168.218.165:5173",
+  "http://192.168.218.165:8081",
 ];
 
 // Attach a dummy io so routes don't break
@@ -36,14 +40,15 @@ app.post("/api/ai/chat", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(30000),
     });
     const data = await r.json();
     res.json(data);
-  } catch {
+  } catch (e) {
+    console.error("AI proxy error:", e.message);
     res.json({
-      response: "I'm here to help. Please call 988 (Suicide Prevention) or text HOME to 741741 (Crisis Text Line) if you need immediate support.",
-      resources: [{ name: "Crisis Text Line", contact: "Text HOME to 741741", type: "crisis" }],
+      response: "I'm having trouble connecting right now. Please call +251965485715 if you need immediate help.",
+      resources: [{ name: "SafeSpeak Emergency Line", contact: "+251965485715", type: "emergency" }],
       isEmergency: false,
     });
   }

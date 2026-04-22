@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { FaSearch, FaShieldAlt, FaCalendarAlt, FaEnvelope, FaMapMarkerAlt, FaClock } from "react-icons/fa";
+import { FiMessageCircle } from "react-icons/fi";
 import { trackCase, getReporterAppointments } from "../services/api";
+import { openChatBot } from "../components/ChatBot";
 
 const statusColor = {
   Pending:        "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -234,6 +236,20 @@ export default function TrackCase() {
         <div className="text-center mt-5">
           <Link to="/home" className="text-xs text-gray-400 hover:underline">← Back to Home</Link>
         </div>
+
+        {/* Mentor help nudge */}
+        <button
+          type="button"
+          onClick={openChatBot}
+          className="mt-4 w-full flex items-center gap-3 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 hover:bg-sky-100 transition text-left"
+        >
+          <FiMessageCircle className="text-sky-500 text-lg shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-sky-800">Need help understanding your case?</p>
+            <p className="text-xs text-sky-600">Our AI Mentor can explain what each status means and what to expect next.</p>
+          </div>
+          <span className="text-xs text-sky-500 font-medium shrink-0">Ask →</span>
+        </button>
       </div>
     </div>
   );

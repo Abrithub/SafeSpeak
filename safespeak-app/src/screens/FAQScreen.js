@@ -130,8 +130,8 @@ export default function FAQScreen() {
             If you or someone you know is in immediate danger, please contact emergency services right away.
           </Text>
           <View style={s.helpBtns}>
-            <TouchableOpacity style={s.helpBtn} onPress={() => Linking.openURL('tel:+251911123456')}>
-              <Text style={s.helpBtnText}>📞 Emergency: +251 911 123 456</Text>
+            <TouchableOpacity style={s.helpBtn} onPress={() => Linking.openURL('tel:+251965485715')}>
+              <Text style={s.helpBtnText}>📞 Emergency: +251 965 485 715</Text>
             </TouchableOpacity>
           </View>
         </View>

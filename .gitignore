@@ -29,3 +29,7 @@ Thumbs.db
 __pycache__/
 *.pyc
 ai-service/classifier.joblib
+
+# Large files
+.git.zip
+*.zip

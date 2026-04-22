@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE = 'http://192.168.191.165:5000/api';
+// ── Base URL ──────────────────────────────────────────────────────────────────
+// Android emulator:  http://10.0.2.2:5000/api
+// iOS simulator:     http://localhost:5000/api
+// Physical device:   http://192.168.197.165:5000/api
+const BASE = 'http://192.168.45.165:5000/api';
+export const BASE_URL = BASE;
 
 const getToken = async () => await AsyncStorage.getItem('token');
 
@@ -54,11 +59,16 @@ export const trackCase = (caseId, email = '') =>
 
 export const sendReporterMessage = async (caseId, text) => {
   const headers = await authHeaders();
-  return fetch(`${BASE}/cases/${caseId}/messages`, {
+  return fetch(`${BASE}/cases/${caseId}/messages/reporter`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, from: 'reporter' }),
+    body: JSON.stringify({ text }),
   }).then(r => r.json());
+};
+
+export const getMyAppointments = async () => {
+  const headers = await authHeaders();
+  return fetch(`${BASE}/appointments/mine`, { headers }).then(r => r.json());
 };
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────

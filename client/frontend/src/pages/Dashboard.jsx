@@ -5,7 +5,7 @@ import {
   FaCog, FaChartBar, FaUserCircle, FaSignOutAlt, FaBell
 } from "react-icons/fa";
 
-import { fetchCases } from "../services/api";
+import { fetchCases, exportCasesCSV, listUsers, deleteUser, changePassword } from "../services/api";
 import CaseList    from "../dashboard/CaseList.jsx";
 import CaseDetail  from "../dashboard/CaseDetail.jsx";
 import Analytics   from "../dashboard/Analytics.jsx";
@@ -331,30 +331,112 @@ function HomeView({ cases, criticalCases, filter, setFilter, filtered, onViewCas
 
 /* ── SETTINGS VIEW ── */
 function SettingsView({ user }) {
+  const [pwForm, setPwForm] = React.useState({ current: "", next: "", confirm: "" });
+  const [pwMsg, setPwMsg]   = React.useState("");
+  const [pwErr, setPwErr]   = React.useState("");
+  const [users, setUsers]   = React.useState([]);
+  const [usersLoaded, setUsersLoaded] = React.useState(false);
+
+  const handleChangePw = async (e) => {
+    e.preventDefault();
+    setPwMsg(""); setPwErr("");
+    if (pwForm.next !== pwForm.confirm) { setPwErr("Passwords do not match"); return; }
+    const res = await changePassword(pwForm.current, pwForm.next);
+    if (res.message && !res.error) { setPwMsg(res.message); setPwForm({ current:"", next:"", confirm:"" }); }
+    else setPwErr(res.message || "Failed");
+  };
+
+  const loadUsers = async () => {
+    const data = await listUsers();
+    if (Array.isArray(data)) setUsers(data);
+    setUsersLoaded(true);
+  };
+
+  const handleDeleteUser = async (id, username) => {
+    if (!window.confirm(`Delete user "${username}"?`)) return;
+    await deleteUser(id);
+    setUsers(u => u.filter(x => x._id !== id));
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-2xl">
       <div>
         <h2 className="text-xl font-bold text-gray-800">Settings</h2>
         <p className="text-sm text-gray-500">Account and system configuration</p>
       </div>
-      <div className="bg-white rounded-xl shadow-sm p-6 max-w-lg">
+
+      {/* Account info */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="font-semibold text-gray-700 mb-4 text-sm">Account Info</h3>
         <div className="space-y-3 text-sm text-gray-600">
-          <div className="flex justify-between border-b pb-2">
-            <span className="text-gray-400">Username</span>
-            <span className="font-medium">{user.username}</span>
-          </div>
-          <div className="flex justify-between border-b pb-2">
-            <span className="text-gray-400">Role</span>
-            <span className="font-medium capitalize">{user.role || "admin"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Organization</span>
-            <span className="font-medium">Organization A</span>
-          </div>
+          {[["Username", user.username], ["Role", user.role || "admin"]].map(([l,v]) => (
+            <div key={l} className="flex justify-between border-b pb-2">
+              <span className="text-gray-400">{l}</span>
+              <span className="font-medium capitalize">{v}</span>
+            </div>
+          ))}
         </div>
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-          <p className="text-xs text-blue-700 font-medium">To add new admin accounts, visit:</p>
+      </div>
+
+      {/* Change password */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="font-semibold text-gray-700 mb-4 text-sm">Change Password</h3>
+        <form onSubmit={handleChangePw} className="space-y-3">
+          {[["Current Password","current"],["New Password","next"],["Confirm New Password","confirm"]].map(([l,k]) => (
+            <div key={k}>
+              <label className="text-xs text-gray-500 block mb-1">{l}</label>
+              <input type="password" value={pwForm[k]} onChange={e => setPwForm({...pwForm,[k]:e.target.value})}
+                className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1a2340]"
+                required />
+            </div>
+          ))}
+          {pwErr && <p className="text-red-500 text-xs">{pwErr}</p>}
+          {pwMsg && <p className="text-green-600 text-xs">{pwMsg}</p>}
+          <button type="submit" className="bg-[#1a2340] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#243060]">
+            Update Password
+          </button>
+        </form>
+      </div>
+
+      {/* Export */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="font-semibold text-gray-700 mb-2 text-sm">Export Data</h3>
+        <p className="text-xs text-gray-400 mb-3">Download all cases as a CSV file for records or analysis.</p>
+        <button onClick={exportCasesCSV}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-green-700">
+          ⬇ Export Cases to CSV
+        </button>
+      </div>
+
+      {/* User management */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-700 text-sm">User Management</h3>
+          <button onClick={loadUsers} className="text-xs text-sky-600 hover:underline">
+            {usersLoaded ? "Refresh" : "Load Users"}
+          </button>
+        </div>
+        {usersLoaded && (
+          <div className="space-y-2">
+            {users.length === 0 && <p className="text-xs text-gray-400">No users found.</p>}
+            {users.map(u => (
+              <div key={u._id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">{u.username}</p>
+                  <p className="text-[10px] text-gray-400">{u.email || "No email"} · {u.role} · {new Date(u.createdAt).toLocaleDateString()}</p>
+                </div>
+                {u.role !== "admin" && (
+                  <button onClick={() => handleDeleteUser(u._id, u.username)}
+                    className="text-[10px] text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-xs text-blue-700 font-medium">To add new admin accounts:</p>
           <p className="text-xs text-blue-500 mt-0.5 font-mono">/admin/register</p>
         </div>
       </div>

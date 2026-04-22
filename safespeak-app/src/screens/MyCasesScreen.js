@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, Alert, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getMyCases } from '../services/api';
+import { getMyCases, sendReporterMessage, getMyAppointments } from '../services/api';
 
 const statusColor = {
   'Pending': '#f59e0b', 'Under Review': '#3b82f6',
@@ -16,6 +16,8 @@ export default function MyCasesScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState({});
   const [selected, setSelected] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
 
   const load = async () => {
     const u = JSON.parse(await AsyncStorage.getItem('currentUser') || '{}');
@@ -25,6 +27,17 @@ export default function MyCasesScreen({ navigation }) {
     else if (data.message) Alert.alert('Error', data.message);
     setLoading(false);
     setRefreshing(false);
+  };
+
+  const sendReply = async (caseId) => {
+    if (!replyText.trim()) return;
+    setReplying(true);
+    try {
+      await sendReporterMessage(caseId, replyText.trim());
+      setReplyText('');
+      await load();
+    } catch { Alert.alert('Error', 'Could not send message'); }
+    setReplying(false);
   };
 
   useEffect(() => { load(); }, []);
@@ -87,6 +100,30 @@ export default function MyCasesScreen({ navigation }) {
           </View>
         )}
 
+        {/* Reply box */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>💬 Secure Messages</Text>
+          {(selectedCase.messages || []).length === 0 && (
+            <Text style={styles.emptyText}>No messages yet. The support team will contact you here if needed.</Text>
+          )}
+          {(selectedCase.messages || []).map((m, i) => (
+            <View key={i} style={[styles.msgBubble, m.from === 'admin' ? styles.msgAdmin : styles.msgReporter]}>
+              <Text style={[styles.msgText, m.from !== 'admin' && { color: '#fff' }]}>{m.text}</Text>
+              <Text style={[styles.msgTime, m.from !== 'admin' && { color: 'rgba(255,255,255,0.6)' }]}>
+                {m.from === 'admin' ? 'Support Team' : 'You'} · {new Date(m.createdAt).toLocaleString()}
+              </Text>
+            </View>
+          ))}
+          <View style={styles.replyRow}>
+            <TextInput style={styles.replyInput} placeholder="Reply to support team..."
+              value={replyText} onChangeText={setReplyText} placeholderTextColor="#9ca3af" />
+            <TouchableOpacity style={[styles.replyBtn, replying && { opacity: 0.6 }]}
+              onPress={() => sendReply(selectedCase.caseId)} disabled={replying}>
+              <Text style={styles.replyBtnText}>➤</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Appointments */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>📅 Appointments</Text>
@@ -121,7 +158,7 @@ export default function MyCasesScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.reportBtn} onPress={() => navigation.navigate('Report')}>
+      <TouchableOpacity style={styles.reportBtn} onPress={() => navigation.navigate('Main', { screen: 'Report' })}>
         <Text style={styles.reportBtnText}>+ Submit New Report</Text>
       </TouchableOpacity>
 
@@ -201,4 +238,13 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, color: '#9ca3af', textAlign: 'center' },
   backBtn: { padding: 16 },
   backText: { color: '#0ea5e9', fontSize: 15 },
+  msgBubble: { borderRadius: 10, padding: 12, marginBottom: 8, maxWidth: '90%' },
+  msgAdmin: { backgroundColor: '#f0fdf4', alignSelf: 'flex-start' },
+  msgReporter: { backgroundColor: '#1a2340', alignSelf: 'flex-end' },
+  msgText: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  msgTime: { fontSize: 10, color: '#9ca3af', marginTop: 4 },
+  replyRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  replyInput: { flex: 1, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#374151' },
+  replyBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0d9488', justifyContent: 'center', alignItems: 'center' },
+  replyBtnText: { color: '#fff', fontSize: 16 },
 });

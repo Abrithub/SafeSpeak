@@ -2,26 +2,21 @@ const router = require("express").Router();
 const Case = require("../models/Case");
 const { protect, adminOnly } = require("../middleware/auth");
 const { upload } = require("../config/cloudinary");
-const { sendStatusUpdateEmail } = require("../config/mailer");
+const { sendStatusUpdateEmail, sendReferralEmail } = require("../config/mailer");
 
 const AI_SERVICE = process.env.AI_SERVICE_URL || "http://localhost:5001";
 
 // Call the AI microservice; fall back to rule-based if it's unreachable
 const aiClassify = async (data) => {
-  const abuseTypes = Array.isArray(data.abuseTypes)
-    ? data.abuseTypes
-    : data.abuseTypes ? [data.abuseTypes] : [];
-
   try {
     const res = await fetch(`${AI_SERVICE}/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description: data.description || "",
-        abuseTypes,
         isVictimSafe: data.isVictimSafe || "",
       }),
-      signal: AbortSignal.timeout(3000), // 3s timeout
+      signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) throw new Error("AI service error");
     const result = await res.json();
@@ -29,19 +24,25 @@ const aiClassify = async (data) => {
       aiScore:        result.aiScore        || 30,
       aiReason:       result.aiReason       || "",
       urgency:        result.urgency        || "Low",
-      classification: result.classification || abuseTypes[0] || "Unclassified",
+      classification: result.classification || "Unclassified",
     };
   } catch (_) {
-    // Fallback: simple rule-based
-    const score = abuseTypes.includes("Sexual") ? 75
-      : abuseTypes.includes("Human trafficking concerns") ? 80
-      : abuseTypes.includes("Physical") ? 60
+    // Fallback: simple keyword check
+    const desc = (data.description || "").toLowerCase();
+    const score = desc.includes("rape") || desc.includes("sexual") ? 75
+      : desc.includes("child") || desc.includes("minor") ? 70
+      : desc.includes("trafficking") ? 80
+      : desc.includes("assault") || desc.includes("beaten") ? 60
       : 30;
     return {
       aiScore: score,
-      aiReason: "Classified by fallback engine.",
+      aiReason: "Classified by fallback keyword engine.",
       urgency: score >= 75 ? "High" : score >= 50 ? "Medium" : "Low",
-      classification: abuseTypes[0] || "Unclassified",
+      classification: desc.includes("sexual") ? "Sexual Abuse"
+        : desc.includes("child") ? "Child Abuse"
+        : desc.includes("trafficking") ? "Human Trafficking"
+        : desc.includes("domestic") || desc.includes("partner") ? "Domestic Violence"
+        : "Unclassified",
     };
   }
 };
@@ -78,6 +79,14 @@ router.post("/", upload.array("evidence", 5), async (req, res) => {
       ...req.body, ...ai, evidence: evidenceFiles,
       reporterUserId, reporterEmail,
     });
+
+    // Email reporter confirmation on new report submission
+    if (reporterEmail) {
+      try {
+        const { sendReportConfirmationEmail } = require("../config/mailer");
+        await sendReportConfirmationEmail(reporterEmail, newCase.caseId, newCase.classification, newCase.urgency);
+      } catch (e) { console.warn("Confirmation email failed:", e.message); }
+    }
 
     // Emit real-time notification to all connected admins
     req.io.emit("new_case", {
@@ -131,12 +140,12 @@ router.get("/mine", protect, async (req, res) => {
     const query = { $or: [{ reporterUserId: req.user.id }] };
     if (req.user.email) query.$or.push({ reporterEmail: req.user.email });
 
-    const cases = await Case.find(query)
-      .select("caseId status classification urgency createdAt messages reporterEmail")
-      .sort({ createdAt: -1 });
+    // Return ALL fields so reporter can see full case details
+    const cases = await Case.find(query).sort({ createdAt: -1 });
 
     const Appointment = require("../models/Appointment");
     const result = await Promise.all(cases.map(async (c) => {
+      // Fetch appointments by caseId — works even without email
       const appointments = await Appointment.find({ caseId: c.caseId })
         .select("date time location notes status createdAt");
       return { ...c.toObject(), appointments };
@@ -277,6 +286,65 @@ router.patch("/bulk/status", protect, adminOnly, async (req, res) => {
     if (!Array.isArray(caseIds) || !status) return res.status(400).json({ message: "caseIds and status required" });
     await Case.updateMany({ caseId: { $in: caseIds } }, { status });
     res.json({ message: `${caseIds.length} cases updated to ${status}` });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// PATCH /api/cases/:id/refer — refer case to police/court/info request (admin only)
+router.patch("/:id/refer", protect, adminOnly, async (req, res) => {
+  try {
+    const referral = {
+      ...req.body,
+      referredAt: new Date(),
+      referredBy: req.user.username,
+    };
+    const c = await Case.findOneAndUpdate(
+      { caseId: req.params.id },
+      { referral, status: "In Progress" },
+      { new: true }
+    );
+    if (!c) return res.status(404).json({ message: "Case not found" });
+
+    // Email reporter with full referral details
+    if (c.reporterEmail) {
+      try {
+        await sendReferralEmail(c.reporterEmail, c.caseId, referral);
+      } catch (e) { console.warn("Referral email failed:", e.message); }
+    }
+
+    res.json(c);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// DELETE /api/cases/:id — delete a case (admin only)
+router.delete("/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const c = await Case.findOneAndDelete({ caseId: req.params.id });
+    if (!c) return res.status(404).json({ message: "Case not found" });
+    // Also delete related appointments
+    const Appointment = require("../models/Appointment");
+    await Appointment.deleteMany({ caseId: req.params.id });
+    res.json({ message: `Case ${req.params.id} deleted` });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// GET /api/cases/export/csv — export all cases as CSV (admin only)
+router.get("/export/csv", protect, adminOnly, async (req, res) => {
+  try {
+    const cases = await Case.find({}).sort({ createdAt: -1 }).lean();
+    const headers = [
+      "caseId","status","urgency","classification","aiScore",
+      "description","location","org","officer",
+      "reporterEmail","isVictimSafe","whenDidItHappen","createdAt"
+    ];
+    const rows = cases.map(c => headers.map(h => {
+      const val = c[h] ?? "";
+      // Escape commas and quotes
+      return `"${String(val).replace(/"/g, '""')}"`;
+    }).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="safespeak-cases-${Date.now()}.csv"`);
+    res.send(csv);
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

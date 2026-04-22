@@ -14,8 +14,8 @@ const caseSchema = new mongoose.Schema({
   // Auto-generated case ID like CASE-1001
   caseId:         { type: String, unique: true },
 
-  reporterEmail:  { type: String, default: "" },
-  reporterUserId: { type: String, default: "" }, // linked to User._id
+  reporterEmail:  { type: String, default: "", index: true },
+  reporterUserId: { type: String, default: "", index: true }, // linked to User._id
 
   // Reporter info
   reportingFor:   { type: String },
@@ -46,6 +46,7 @@ const caseSchema = new mongoose.Schema({
     type: String,
     enum: ["Pending", "Under Review", "In Progress", "Resolved", "Rejected", "Archived"],
     default: "Pending",
+    index: true,
   },
   location:  { type: String, default: "Unknown" },
   org:       { type: String, default: "Unassigned" },
@@ -58,6 +59,29 @@ const caseSchema = new mongoose.Schema({
     publicId: { type: String },
     type:     { type: String },
   }],
+
+  // Referral — where the case was sent
+  referral: {
+    type:            { type: String, enum: ["police", "court", "info_request", null], default: null },
+    // Police fields
+    stationName:     { type: String, default: "" },
+    stationAddress:  { type: String, default: "" },
+    officerName:     { type: String, default: "" },
+    officerPhone:    { type: String, default: "" },
+    // Court fields
+    courtName:       { type: String, default: "" },
+    courtDate:       { type: String, default: "" },
+    courtTime:       { type: String, default: "" },
+    courtRoom:       { type: String, default: "" },
+    judge:           { type: String, default: "" },
+    // Info request fields
+    infoRequest:     { type: String, default: "" },
+    infoDeadline:    { type: String, default: "" },
+    // Common
+    referralNote:    { type: String, default: "" },
+    referredAt:      { type: Date },
+    referredBy:      { type: String, default: "" },
+  },
 }, { timestamps: true });
 
 // Auto-generate caseId before first save

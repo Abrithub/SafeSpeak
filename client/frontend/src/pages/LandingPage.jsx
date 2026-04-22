@@ -94,7 +94,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="font-bold text-gray-800">Call Now For Urgent Incident</p>
-                <p className="text-sky-500 font-semibold">+251 911 123 456</p>
+                <p className="text-sky-500 font-semibold">+251 965 485 715</p>
               </div>
             </div>
             <div className="flex items-center gap-6">
@@ -274,9 +274,9 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {[
-              { icon: <FaPhone className="text-rose-500" />, bg: "bg-rose-100", title: "Call Us", sub: "+251 911 123 456", href: "tel:+251911123456" },
+              { icon: <FaPhone className="text-rose-500" />, bg: "bg-rose-100", title: "Call Us", sub: "+251 965 485 715", href: "tel:+251965485715" },
               { icon: <FaEnvelope className="text-green-500" />, bg: "bg-green-100", title: "Email Us", sub: "support@safespeak.org", href: "mailto:support@safespeak.org" },
-              { icon: <FaComments className="text-sky-500" />, bg: "bg-sky-100", title: "WhatsApp", sub: "Chat with us", href: "https://wa.me/251911123456" },
+              { icon: <FaComments className="text-sky-500" />, bg: "bg-sky-100", title: "WhatsApp", sub: "Chat with us", href: "https://wa.me/251960255733" },
             ].map((c) => (
               <a key={c.title} href={c.href} target="_blank" rel="noopener noreferrer"
                 className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition flex items-center gap-4">
@@ -299,7 +299,7 @@ export default function LandingPage() {
                 <h3 className="text-xl font-semibold text-slate-800">If you prefer to speak to someone directly,</h3>
                 <p className="text-slate-600 text-sm mt-1">contact our Call Center for immediate help and guidance.</p>
                 <p className="text-rose-600 font-semibold text-sm mt-3">Available 24 hours a day, 7 days a week.</p>
-                <a href="tel:+251911123456" className="mt-1 inline-block text-slate-800 underline font-medium text-sm">+251 911 123 456</a>
+                <a href="tel:+251965485715" className="mt-1 inline-block text-slate-800 underline font-medium text-sm">+251 965 485 715</a>
               </div>
               <button onClick={() => { window.open("", "_self"); window.close(); }}
                 className="shrink-0 bg-rose-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-rose-400 transition text-sm">

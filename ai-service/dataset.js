@@ -5,18 +5,18 @@
  */
 
 const RESOURCES = {
-  emergency:        { name: "Emergency Services",            contact: "911",                    type: "emergency" },
-  suicide:          { name: "Suicide Prevention Lifeline",   contact: "988",                    type: "crisis" },
-  domesticViolence: { name: "National DV Hotline",           contact: "1-800-799-7233",         type: "support" },
-  childAbuse:       { name: "Childhelp National Hotline",    contact: "1-800-422-4453",         type: "support" },
-  crisisText:       { name: "Crisis Text Line",              contact: "Text HOME to 741741",    type: "crisis" },
-  rainn:            { name: "RAINN Sexual Assault Hotline",  contact: "1-800-656-4673",         type: "support" },
-  trafficking:      { name: "Human Trafficking Hotline",     contact: "1-888-373-7888",         type: "support" },
-  elderAbuse:       { name: "Eldercare Locator",             contact: "1-800-677-1116",         type: "support" },
-  trevor:           { name: "The Trevor Project (LGBTQ+)",   contact: "1-866-488-7386",         type: "support" },
-  legalAid:         { name: "Legal Aid Society",             contact: "www.lawhelp.org",        type: "legal" },
-  mentalHealth:     { name: "NAMI Mental Health Helpline",   contact: "1-800-950-6264",         type: "mental" },
-  safehouse:        { name: "Local Safe House / Shelter",    contact: "Search: shelter near me",type: "shelter" },
+  emergency:        { name: "SafeSpeak Emergency Line",       contact: "+251965485715",          type: "emergency" },
+  suicide:          { name: "SafeSpeak Crisis Support",       contact: "+251987240570",          type: "crisis" },
+  domesticViolence: { name: "Domestic Violence Support",      contact: "+251909853958",          type: "support" },
+  childAbuse:       { name: "Child Protection Hotline",       contact: "+251909853958",          type: "support" },
+  crisisText:       { name: "SafeSpeak WhatsApp Support",     contact: "+251960255733",          type: "crisis" },
+  rainn:            { name: "Sexual Assault Support",         contact: "+251965485715",          type: "support" },
+  trafficking:      { name: "Human Trafficking Hotline",      contact: "+251986197824",          type: "support" },
+  elderAbuse:       { name: "Elder Protection Support",       contact: "+251987240570",          type: "support" },
+  trevor:           { name: "Youth Support Line",             contact: "+251909853958",          type: "support" },
+  legalAid:         { name: "Legal Aid Support",              contact: "+251986197824",          type: "legal" },
+  mentalHealth:     { name: "Mental Health Support",          contact: "+251987240570",          type: "mental" },
+  safehouse:        { name: "Safe House / Shelter",           contact: "+251965485715",          type: "shelter" },
 };
 
 const DATASET = [
@@ -64,14 +64,54 @@ const DATASET = [
   {
     id: 7, urgency: "High", classification: "Domestic Violence",
     keywords: ["domestic violence", "partner hitting", "spouse beating", "husband hitting", "wife beating", "partner abuse"],
-    response: "Domestic violence is never acceptable. Your safety is the priority. There is help available right now.",
+    response: `What you are experiencing is domestic violence, and it is never your fault. You deserve to be safe.
+
+Here is what you can do right now:
+
+1. If you are in immediate danger, leave the house and go to a neighbor, public place, or call +251965485715 immediately.
+
+2. Document the abuse — take photos of injuries, save threatening messages, write down dates and what happened. This evidence matters.
+
+3. Tell someone you trust — a friend, family member, or community leader. You should not carry this alone.
+
+4. Report it on SafeSpeak:
+   • Go to "Report Incident"
+   • Describe what is happening in your own words
+   • You can stay completely anonymous
+   • A trained support team will review your case within 24 hours
+
+5. Consider a safety plan — decide in advance where you will go if things escalate, what you will take, and who you will call.
+
+You are not alone. Many people have been in your situation and found safety and support. What would you like to do first?`,
     resources: [RESOURCES.domesticViolence, RESOURCES.emergency, RESOURCES.safehouse],
   },
   {
     id: 8, urgency: "High", classification: "Domestic Violence",
-    keywords: ["being beaten", "partner violent", "afraid of partner", "scared of husband", "scared of wife", "abusive relationship"],
-    response: "You are not alone, and this is not your fault. Please reach out for help — you deserve to be safe.",
-    resources: [RESOURCES.domesticViolence, RESOURCES.crisisText, RESOURCES.safehouse],
+    keywords: ["being beaten", "partner violent", "afraid of partner", "scared of husband", "scared of wife", "abusive relationship", "hits me", "hit me", "my wife hits", "my husband hits"],
+    response: `I hear you, and I want you to know — what is happening to you is wrong. Being hit or hurt by a partner is domestic violence, and it is a crime. This is not your fault.
+
+Right now, here is what matters most:
+
+Are you safe at this moment? If you are in immediate danger, please call +251965485715 or move to a safe location first.
+
+If you are safe right now, here are your next steps:
+
+1. You have the right to report this. SafeSpeak lets you report safely and anonymously. No one will know you reported unless you choose to tell them.
+
+2. How to report:
+   • Go to "Report Incident" on SafeSpeak
+   • Describe what your partner has been doing to you
+   • Our AI will classify it and route it to the right support team
+   • You will get a Case ID to track your case
+
+3. Document what is happening — photos of injuries, dates, what was said or done. This helps build your case.
+
+4. Think about a safety plan — where can you go if it gets worse? Who can you call? What documents do you need to take?
+
+5. You can also reach the Domestic Violence Support line at +251909853958 to talk to someone right now.
+
+You deserve safety and respect. I am here to help you through every step. What do you want to do first?`,
+    resources: [RESOURCES.domesticViolence, RESOURCES.emergency, RESOURCES.safehouse],
   },
   {
     id: 9, urgency: "Medium", classification: "Emotional Abuse",
@@ -84,7 +124,24 @@ const DATASET = [
   {
     id: 10, urgency: "High", classification: "Sexual Assault",
     keywords: ["rape", "sexual assault", "sexually assaulted", "raped", "forced sex", "non-consensual"],
-    response: "What happened to you is not your fault. You are brave for speaking up. Please seek help — you don't have to go through this alone.",
+    response: `What happened to you is not your fault. Not in any way. You are incredibly brave for speaking about this.
+
+Here is what you should know and what you can do:
+
+1. Your safety first — if you are still in danger or near the person who hurt you, please move to a safe place and call +251965485715.
+
+2. You do not have to face this alone. There are trained people ready to support you right now.
+
+3. If the assault happened recently:
+   • Try not to shower or change clothes yet if possible — this preserves evidence
+   • Go to a hospital or health center — they can provide medical care and document injuries
+   • You do not have to file a police report to get medical help
+
+4. Report on SafeSpeak — you can do this anonymously. Describe what happened and our team will connect you with the right support, including legal aid and counseling.
+
+5. Counseling is available — talking to a professional can help you process what happened. You deserve that support.
+
+What happened to you was a crime. You have every right to seek justice and support. I am here with you. What do you need right now?`,
     resources: [RESOURCES.rainn, RESOURCES.emergency, RESOURCES.crisisText],
   },
   {
@@ -207,20 +264,81 @@ const DATASET = [
   // ── GENERAL SUPPORT ──────────────────────────────────────────────────────
   {
     id: 28, urgency: "Low", classification: "General Support",
-    keywords: ["need help", "don't know what to do", "scared", "confused", "lost", "no one to talk to"],
-    response: "Reaching out takes courage. You are not alone. Let's figure out the best way to support you.",
-    resources: [RESOURCES.crisisText, RESOURCES.mentalHealth],
+    keywords: ["need help", "don't know what to do", "scared", "confused", "lost", "no one to talk to", "don't know where to start"],
+    response: `I'm really glad you reached out — that took courage, and you are not alone.
+
+Here's what you can do right now, one step at a time:
+
+1. Take a breath. You are in a safe space here. Nothing you share will be used against you.
+
+2. Think about your immediate safety. Are you in a safe place right now? If someone is hurting you or threatening you, please move to a public area or a trusted neighbor's home.
+
+3. Talk to someone you trust — a friend, family member, teacher, or community leader. You don't have to face this alone.
+
+4. Report what's happening. SafeSpeak lets you report abuse safely and anonymously. Here's how:
+   • Go to the "Report Incident" page
+   • Describe what happened in your own words — you don't need to know the exact type of abuse
+   • You can stay completely anonymous
+   • You'll get a Case ID to track your case
+
+5. If you are in immediate danger right now, call our emergency line immediately.
+
+What is happening to you? Tell me more and I can give you more specific guidance.`,
+    resources: [RESOURCES.crisisText, RESOURCES.mentalHealth, RESOURCES.emergency],
   },
   {
     id: 29, urgency: "Low", classification: "Information Request",
-    keywords: ["how to report", "where to report", "report abuse", "how do i report", "what should i do"],
-    response: "Reporting abuse is an important step. I can guide you through the process and connect you with the right resources.",
+    keywords: ["how to report", "where to report", "report abuse", "how do i report", "what should i do", "steps to report"],
+    response: `Reporting is a brave and important step. Here is exactly how to do it on SafeSpeak:
+
+Step 1 — Create a free account at /signup
+   Your identity is fully protected. It takes less than a minute.
+
+Step 2 — Click "Report Incident"
+   You'll find this button on the home page or in the menu.
+
+Step 3 — Describe what happened in your own words
+   You do NOT need to know the type of abuse — our AI identifies it automatically from your description.
+
+Step 4 — Upload evidence (optional)
+   Photos, videos, or documents can strengthen your case. This is optional.
+
+Step 5 — Choose your privacy setting
+   You can stay completely anonymous, or provide contact details to receive updates.
+
+Step 6 — Submit your report
+   You will receive a unique Case ID. Save this — you'll need it to track your case.
+
+Step 7 — Track your case anytime
+   Go to /track and enter your Case ID + email to see your case status and messages from the support team.
+
+After you submit, a trained support team reviews your case within 24–48 hours. Urgent cases are escalated immediately.
+
+Do you need help with any specific step?`,
     resources: [RESOURCES.crisisText, RESOURCES.legalAid],
   },
   {
     id: 30, urgency: "Low", classification: "Safety Planning",
-    keywords: ["safety plan", "how to stay safe", "escape plan", "leave abuser", "how to leave"],
-    response: "Creating a safety plan is a smart and brave step. Let's work through this together to keep you safe.",
+    keywords: ["safety plan", "how to stay safe", "escape plan", "leave abuser", "how to leave", "want to leave"],
+    response: `Creating a safety plan is one of the most important things you can do. Let's go through it together:
+
+Immediate safety right now:
+• If you are in danger at this moment, leave the area and go somewhere public or to a trusted person's home.
+• Call our emergency line: +251965485715
+
+If you are planning to leave a dangerous situation:
+1. Choose a safe time — when the abuser is away or distracted.
+2. Pack an emergency bag with: ID documents, phone charger, some cash, a change of clothes, any medications.
+3. Tell one trusted person your plan — a friend, relative, or neighbor.
+4. Know where you will go — a friend's home, a family member, or a shelter.
+5. Save emergency numbers in your phone under a neutral name.
+
+After you are safe:
+• Report what happened on SafeSpeak so the support team can help you.
+• You can stay completely anonymous.
+• The team can connect you with shelters, legal aid, and counseling.
+
+You deserve to be safe. What is your current situation? I can give you more specific guidance.`,
     resources: [RESOURCES.domesticViolence, RESOURCES.safehouse, RESOURCES.crisisText],
   },
 
@@ -228,7 +346,28 @@ const DATASET = [
   {
     id: 31, urgency: "High", classification: "Stalking",
     keywords: ["stalking", "being followed", "someone following me", "stalker", "watching me", "showing up everywhere"],
-    response: "Stalking is dangerous and illegal. Please document all incidents and contact authorities.",
+    response: `Being stalked is frightening, and you are right to take it seriously. Stalking is illegal and can escalate — your safety matters.
+
+Here is what to do:
+
+1. Document everything — keep a log of every incident: date, time, location, what happened, any witnesses. Save screenshots of messages or calls.
+
+2. Do not engage with the stalker — do not respond to messages or confront them. This can make the situation more dangerous.
+
+3. Tell people around you — let trusted friends, family, neighbors, or your workplace know what is happening so they can watch out for you.
+
+4. Vary your routines — change the times and routes you travel if possible.
+
+5. Secure your accounts — check your phone and social media for any tracking apps or shared location settings. Change your passwords.
+
+6. Report it:
+   • Report to SafeSpeak — describe the stalking behavior and our team will help you
+   • You can also report to local police — your documentation will be very helpful
+   • Legal protection orders (restraining orders) are available
+
+7. If you feel you are in immediate danger right now, call +251965485715 immediately.
+
+You deserve to feel safe. What is happening — is this someone you know?`,
     resources: [RESOURCES.emergency, RESOURCES.domesticViolence, RESOURCES.legalAid],
   },
   {
