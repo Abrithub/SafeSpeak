@@ -101,10 +101,13 @@ router.post("/admin/register", async (req, res) => {
     if (secretKey !== process.env.ADMIN_REGISTER_KEY)
       return res.status(403).json({ message: "Invalid authorization key" });
     if (!username || !password) return res.status(400).json({ message: "Username and password required" });
+    if (!email) return res.status(400).json({ message: "Email is required for admin accounts" });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
     if (password.length < 8) return res.status(400).json({ message: "Admin password must be at least 8 characters" });
-    const exists = await User.findOne({ username });
-    if (exists) return res.status(409).json({ message: "Username already taken" });
-    const user = await User.create({ username, password, email: email || "", role: "admin" });
+    const exists = await User.findOne({ $or: [{ username }, { email }] });
+    if (exists && exists.username === username) return res.status(409).json({ message: "Username already taken" });
+    if (exists && exists.email === email) return res.status(409).json({ message: "Email already registered" });
+    const user = await User.create({ username, password, email, role: "admin" });
     res.status(201).json({ message: "Admin account created", token: signToken(user), role: user.role });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
@@ -113,10 +116,13 @@ router.post("/admin/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
+    // Allow login by username OR email
+    const user = await User.findOne({
+      $or: [{ username }, { email: username }]
+    });
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ message: "Invalid username or password" });
-    res.json({ token: signToken(user), role: user.role, username: user.username });
+    res.json({ token: signToken(user), role: user.role, username: user.username, email: user.email });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

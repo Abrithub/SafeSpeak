@@ -23,6 +23,12 @@ export default function TrackCaseScreen({ navigation }) {
   const handleTrack = async () => {
     const id = caseId.trim().toUpperCase();
     if (!id) { setError('Please enter your Case ID'); return; }
+    if (!/^CASE-\d+$/i.test(id) && !/^\d+$/.test(id)) {
+      setError('Case ID format should be like CASE-1001'); return;
+    }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address'); return;
+    }
     setLoading(true); setError(''); setResult(null); setAppointments([]);
     try {
       const [caseRes, apptRes] = await Promise.all([
@@ -92,15 +98,12 @@ export default function TrackCaseScreen({ navigation }) {
           {tab === 'case' && (
             <View>
               {/* Status header */}
-              <View style={[s.card, { borderLeftWidth: 4, borderLeftColor: STATUS_COLOR[result.status] || '#6b7280' }]}>
+              <View style={s.card}>
                 <Text style={s.caseIdText}>{result.caseId}</Text>
                 <Text style={s.classText}>{result.classification}</Text>
                 <View style={s.badgeRow}>
                   <View style={[s.badge, { backgroundColor: (STATUS_COLOR[result.status] || '#6b7280') + '22' }]}>
                     <Text style={[s.badgeText, { color: STATUS_COLOR[result.status] || '#6b7280' }]}>{result.status}</Text>
-                  </View>
-                  <View style={[s.badge, { backgroundColor: (URGENCY_COLOR[result.urgency] || '#6b7280') + '22' }]}>
-                    <Text style={[s.badgeText, { color: URGENCY_COLOR[result.urgency] || '#6b7280' }]}>{result.urgency} Priority</Text>
                   </View>
                 </View>
                 <Text style={s.submittedText}>Submitted: {new Date(result.submittedAt).toLocaleDateString()}</Text>

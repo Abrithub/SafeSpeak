@@ -177,8 +177,7 @@ export default function MyCases() {
                   </div>
                   <p className="text-sm font-medium text-gray-800">{c.classification}</p>
                   <div className="flex items-center gap-1 mt-1">
-                    <span className={`w-2 h-2 rounded-full ${urgencyDot[c.urgency]}`} />
-                    <span className="text-xs text-gray-500">{c.urgency} · {new Date(c.createdAt).toLocaleDateString()}</span>
+                    <span className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleDateString()}</span>
                   </div>
                   {(c.messages||[]).filter(m => m.from === "admin").length > 0 && (
                     <p className="text-[10px] text-green-600 mt-1 font-medium">💬 New message from support</p>
@@ -218,9 +217,6 @@ export default function MyCases() {
                       <div>
                         <p className="text-xs text-gray-400 font-mono">{selectedCase.caseId}</p>
                         <h3 className="text-lg font-bold text-gray-800">{selectedCase.classification}</h3>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${urgencyLabel[selectedCase.urgency]}`}>
-                          {selectedCase.urgency} Priority
-                        </span>
                       </div>
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColor[selectedCase.status]}`}>
                         {selectedCase.status}

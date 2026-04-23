@@ -31,6 +31,9 @@ app.use("/api/cases",        caseRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 
+// ── Keep-alive ping endpoint (for UptimeRobot or similar) ────────────────────
+app.get("/api/ping", (_, res) => res.json({ status: "alive", time: new Date().toISOString() }));
+
 // ── AI chat proxy — forwards to ai-service ───────────────────────────────────
 const AI_SERVICE = process.env.AI_SERVICE_URL || "http://localhost:5001";
 

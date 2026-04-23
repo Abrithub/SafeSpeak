@@ -47,9 +47,20 @@ const aiClassify = async (data) => {
   }
 };
 
-// POST /api/cases  — submit a new report with optional file uploads (public or authenticated)
+// POST /api/cases  — submit a new report with optional file uploads (reporters only, not admins)
 router.post("/", upload.array("evidence", 5), async (req, res) => {
   try {
+    // Block admins from submitting reports
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+        if (decoded.role === "admin") {
+          return res.status(403).json({ message: "Admins cannot submit reports." });
+        }
+      } catch (_) {}
+    }
     const ai = await aiClassify(req.body);
     const evidenceFiles = (req.files || []).map((f) => ({
       url: f.path, publicId: f.filename, type: f.mimetype,
@@ -84,7 +95,7 @@ router.post("/", upload.array("evidence", 5), async (req, res) => {
     if (reporterEmail) {
       try {
         const { sendReportConfirmationEmail } = require("../config/mailer");
-        await sendReportConfirmationEmail(reporterEmail, newCase.caseId, newCase.classification, newCase.urgency);
+        await sendReportConfirmationEmail(reporterEmail, newCase.caseId, newCase.classification);
       } catch (e) { console.warn("Confirmation email failed:", e.message); }
     }
 

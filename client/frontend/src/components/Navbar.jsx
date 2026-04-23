@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaChevronDown } from "react-icons/fa";
+import { FaChevronDown, FaUserCircle } from "react-icons/fa";
 import { changeLanguage, getSavedLang, LANGUAGES } from "../utils/translate";
 
 const Navbar = () => {
   const [lang, setLang] = useState(getSavedLang());
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
+  const user  = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  const isLoggedIn = !!token;
 
   const handleLangChange = (e) => {
     const code = e.target.value;
@@ -13,8 +18,15 @@ const Navbar = () => {
     changeLanguage(code);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("adminAuth");
+    setDropdownOpen(false);
+    navigate("/home");
+  };
+
   const scrollTo = (id) => {
-    // If not on home, navigate there first then scroll
     if (!window.location.pathname.includes("/home") &&
         !window.location.pathname.includes("/about") &&
         !window.location.pathname.includes("/faq") &&
@@ -126,31 +138,61 @@ const Navbar = () => {
               ))}
             </select>
 
-            <NavLink 
-              to="/signup"
-              className="text-sm text-gray-700 hover:text-sky-500"
-            >
-              Sign Up
-            </NavLink>
+            {isLoggedIn ? (
+              /* ── Logged-in: show avatar + username + dropdown ── */
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <FaUserCircle className="text-sky-500 text-xl" />
+                  <span className="text-sm font-medium text-gray-700">{user.username}</span>
+                  <FaChevronDown className={`text-xs text-gray-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                </button>
 
-            <button
-              onClick={() => {
-                const token = localStorage.getItem("token");
-                const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
-                if (token && user.role === "reporter") navigate("/my-cases");
-                else navigate("/login");
-              }}
-              className="text-sm text-gray-700 hover:text-sky-500"
-            >
-              My Cases
-            </button>
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-xs text-gray-400">Signed in as</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{user.username}</p>
+                      <p className="text-xs text-sky-500 capitalize">{user.role}</p>
+                    </div>
+                    {user.role === "admin" ? (
+                      <button onClick={() => { setDropdownOpen(false); navigate("/dashboard"); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
+                        📊 Dashboard
+                      </button>
+                    ) : (
+                      <button onClick={() => { setDropdownOpen(false); navigate("/my-cases"); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
+                        📋 My Cases
+                      </button>
+                    )}
+                    <button onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition border-t border-gray-100">
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ── Not logged in: show Sign Up + Login ── */
+              <>
+                <NavLink
+                  to="/signup"
+                  className="text-sm text-gray-700 hover:text-sky-500"
+                >
+                  Sign Up
+                </NavLink>
 
-            <NavLink
-              to="/login"
-              className="px-4 py-1.5 bg-sky-500 text-white text-sm font-medium rounded hover:bg-sky-600"
-            >
-              Login
-            </NavLink>
+                <NavLink
+                  to="/login"
+                  className="px-4 py-1.5 bg-sky-500 text-white text-sm font-medium rounded hover:bg-sky-600"
+                >
+                  Login
+                </NavLink>
+              </>
+            )}
 
             <button
               onClick={() => {

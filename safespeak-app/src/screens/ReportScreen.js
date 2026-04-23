@@ -23,25 +23,59 @@ export default function ReportScreen({ navigation }) {
   const [section, setSection]   = useState(1);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [errors, setErrors]     = useState({});
 
   useEffect(() => {
     AsyncStorage.getItem('token').then(t => { setIsLoggedIn(!!t); setChecking(false); });
   }, []);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    // Email: no spaces
+    if (k === 'email') v = v.replace(/\s/g, '');
+    // Name: limit special chars
+    if (k === 'reporterName') v = v.replace(/[^a-zA-Z\s'-]/g, '').slice(0, 100);
+    setForm(f => ({ ...f, [k]: v }));
+  };
+
+  const validateSection = (sec) => {
+    const e = {};
+    if (sec === 1) {
+      if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        e.email = 'Enter a valid email address';
+      }
+      if (form.phone.trim()) {
+        const cleaned = form.phone.replace(/\s/g, '');
+        if (!/^(\+251|0)[0-9]{9}$/.test(cleaned)) {
+          e.phone = 'Enter valid Ethiopian phone (+251912345678 or 0912345678)';
+        }
+      }
+    }
+    if (sec === 3) {
+      if (!form.description.trim()) e.description = 'Description is required';
+      else if (form.description.trim().length < 20) e.description = 'At least 20 characters needed';
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = async () => {
-    if (!form.description.trim()) {
-      Alert.alert('Required', 'Please describe what happened. Our AI will automatically identify the type of abuse.');
+    if (!validateSection(3)) return;
+    if (!form.consentToShare) {
+      Alert.alert('Required', 'Please agree to share this report with authorized organizations.');
       return;
     }
-    if (!form.consentToShare) { Alert.alert('Required', 'Please agree to share this report'); return; }
     setLoading(true);
     try {
-      const res = await submitReport({ ...form, reporterEmail: form.email, location: form.locationTypeOfIncident });
+      const res = await submitReport({
+        ...form,
+        reporterEmail: form.email.trim(),
+        location: form.locationTypeOfIncident,
+      });
       if (res.caseId) setSubmitted(res.caseId);
-      else Alert.alert('Error', res.message || 'Submission failed');
-    } catch { Alert.alert('Error', 'Server unreachable.'); }
+      else Alert.alert('Submission Failed', res.message || 'Could not submit report. Please try again.');
+    } catch (err) {
+      Alert.alert('Connection Error', 'Could not reach the server. Please check your connection and try again.');
+    }
     setLoading(false);
   };
 
@@ -142,19 +176,56 @@ export default function ReportScreen({ navigation }) {
               value={form.reportingFor} onChange={v => set('reportingFor', v)} />
 
             <Text style={s.label}>Your name (optional)</Text>
-            <TextInput style={s.input} placeholder="Your name" value={form.reporterName}
-              onChangeText={v => set('reporterName', v)} placeholderTextColor={colors.textLight} />
+            <TextInput style={[s.input, errors.reporterName && s.inputError]} placeholder="Your name" value={form.reporterName}
+              onChangeText={v => { set('reporterName', v); setErrors(e => ({ ...e, reporterName: '' })); }}
+              maxLength={100} placeholderTextColor={colors.textLight} />
+            {errors.reporterName ? <Text style={s.errorText}>{errors.reporterName}</Text> : null}
 
             <Text style={s.label}>Email (optional — for case updates)</Text>
-            <TextInput style={s.input} placeholder="your@email.com" value={form.email}
-              onChangeText={v => set('email', v)} keyboardType="email-address" autoCapitalize="none"
+            <TextInput style={[s.input, errors.email && s.inputError]} placeholder="your@email.com" value={form.email}
+              onChangeText={v => { set('email', v); setErrors(e => ({ ...e, email: '' })); }}
+              keyboardType="email-address" autoCapitalize="none" maxLength={100}
               placeholderTextColor={colors.textLight} />
+            {errors.email ? <Text style={s.errorText}>{errors.email}</Text> : null}
 
             <Text style={s.label}>Phone (optional)</Text>
-            <TextInput style={s.input} placeholder="+251 9xx xxx xxx" value={form.phone}
-              onChangeText={v => set('phone', v)} keyboardType="phone-pad" placeholderTextColor={colors.textLight} />
+            <TextInput
+              style={[s.input, errors.phone && s.inputError]}
+              placeholder="+251 9xx xxx xxx"
+              value={form.phone}
+              onChangeText={v => {
+                // Block any non-numeric / non-+ / non-space character immediately
+                const cleaned = v.replace(/[^0-9+\s]/g, '');
+                set('phone', cleaned);
+                if (cleaned !== v) {
+                  setErrors(e => ({ ...e, phone: 'Only numbers are allowed here' }));
+                } else {
+                  // Live format check once user has typed enough
+                  if (cleaned.replace(/\s/g, '').length >= 10) {
+                    const valid = /^(\+251|0)[0-9]{9}$/.test(cleaned.replace(/\s/g, ''));
+                    setErrors(e => ({ ...e, phone: valid ? '' : 'Enter valid Ethiopian phone (+251912345678 or 0912345678)' }));
+                  } else {
+                    setErrors(e => ({ ...e, phone: '' }));
+                  }
+                }
+              }}
+              keyboardType="phone-pad"
+              maxLength={15}
+              placeholderTextColor={colors.textLight}
+            />
+            {errors.phone ? (
+              <View style={s.errorRow}>
+                <Text style={s.errorIcon}>⚠️</Text>
+                <Text style={s.errorText}>{errors.phone}</Text>
+              </View>
+            ) : form.phone.length > 0 && /^(\+251|0)[0-9]{9}$/.test(form.phone.replace(/\s/g, '')) ? (
+              <View style={s.errorRow}>
+                <Text style={s.errorIcon}>✅</Text>
+                <Text style={s.validText}>Valid phone number</Text>
+              </View>
+            ) : null}
 
-            <TouchableOpacity style={s.nextBtn} onPress={() => setSection(2)}>
+            <TouchableOpacity style={s.nextBtn} onPress={() => { if (validateSection(1)) setSection(2); }}
               <Text style={s.nextBtnText}>Next: Victim Info →</Text>
             </TouchableOpacity>
           </View>
@@ -198,20 +269,19 @@ export default function ReportScreen({ navigation }) {
               <Text style={s.aiHintText}>🤖 The more detail you provide, the better our AI can assess and prioritize your case.</Text>
             </View>
 
-            <TextInput style={[s.input, s.textarea]}
+            <TextInput style={[s.input, s.textarea, errors.description && s.inputError]}
               placeholder="Example: My neighbor has been hitting his child every night. The child is around 8 years old and I can hear crying through the wall..."
-              value={form.description} onChangeText={v => set('description', v)}
-              multiline numberOfLines={7} textAlignVertical="top"
+              value={form.description} onChangeText={v => { set('description', v); setErrors(e => ({ ...e, description: '' })); }}
+              multiline numberOfLines={7} textAlignVertical="top" maxLength={2000}
               placeholderTextColor={colors.textLight} />
+            {errors.description ? <Text style={s.errorText}>{errors.description}</Text> : null}
+            <Text style={s.charCount}>{form.description.length}/2000</Text>
 
             <View style={s.navRow}>
               <TouchableOpacity style={s.backBtn} onPress={() => setSection(2)}>
                 <Text style={s.backBtnText}>← Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.nextBtn} onPress={() => {
-                if (!form.description.trim()) { Alert.alert('Required', 'Please describe what happened.'); return; }
-                setSection(4);
-              }}>
+              <TouchableOpacity style={s.nextBtn} onPress={() => { if (validateSection(3)) setSection(4); }}
                 <Text style={s.nextBtnText}>Next: Privacy →</Text>
               </TouchableOpacity>
             </View>
@@ -282,6 +352,12 @@ const s = StyleSheet.create({
   fieldWrap:        { marginBottom: spacing.sm },
   label:            { fontSize: font.sm, fontWeight: '600', color: colors.text, marginBottom: spacing.xs, marginTop: spacing.sm },
   input:            { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 13, fontSize: font.md, color: colors.text },
+  inputError:       { borderColor: colors.danger },
+  errorRow:         { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  errorIcon:        { fontSize: 12 },
+  errorText:        { fontSize: font.xs, color: colors.danger, flex: 1 },
+  validText:        { fontSize: font.xs, color: colors.success, flex: 1 },
+  charCount:        { fontSize: font.xs, color: colors.textLight, textAlign: 'right', marginTop: 2 },
   textarea:         { height: 140, textAlignVertical: 'top' },
   radioRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   radioBtn:         { paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg },

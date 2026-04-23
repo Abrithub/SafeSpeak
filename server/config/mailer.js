@@ -247,9 +247,8 @@ const sendReferralEmail = async (to, caseId, referral) => {
   console.log("📧 Referral email preview:", nodemailer.getTestMessageUrl(info));
 };
 
-const sendReportConfirmationEmail = async (to, caseId, classification, urgency) => {
+const sendReportConfirmationEmail = async (to, caseId, classification) => {
   const t = await getTransporter();
-  const urgencyColor = urgency === 'High' ? '#ef4444' : urgency === 'Medium' ? '#f59e0b' : '#3b82f6';
   const info = await t.sendMail({
     from: `"SafeSpeak" <${process.env.EMAIL_USER || 'safespeak@test.com'}>`,
     to,
@@ -262,15 +261,14 @@ const sendReportConfirmationEmail = async (to, caseId, classification, urgency) 
         </div>
         <div style="padding:24px">
           <p style="color:#374151">Dear Reporter,</p>
-          <p style="color:#374151">Your report has been <strong>successfully received</strong> and our AI has analyzed it. A trained support team will review your case within <strong>24–48 hours</strong>.</p>
+          <p style="color:#374151">Your report has been <strong>successfully received</strong> and our team will review your case within <strong>24–48 hours</strong>.</p>
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
             <p style="margin:0;font-size:12px;color:#6b7280">Your Case ID</p>
             <p style="margin:8px 0;font-size:28px;font-weight:bold;color:#1a2340;font-family:monospace">${caseId}</p>
             <p style="margin:0;font-size:12px;color:#6b7280">Save this ID to track your case status</p>
           </div>
           <table style="width:100%;font-size:13px;border-collapse:collapse;margin:12px 0">
-            <tr><td style="padding:6px 0;color:#6b7280;width:120px">Classification</td><td style="font-weight:bold;color:#374151">${classification}</td></tr>
-            <tr><td style="padding:6px 0;color:#6b7280">Priority</td><td><span style="background:${urgencyColor}22;color:${urgencyColor};padding:2px 10px;border-radius:20px;font-weight:bold;font-size:12px">${urgency}</span></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;width:120px">Case Type</td><td style="font-weight:bold;color:#374151">${classification}</td></tr>
           </table>
           <div style="background:#fef9c3;border-left:4px solid #f59e0b;padding:12px;border-radius:4px;margin:12px 0">
             <p style="margin:0;font-size:13px;color:#78350f">To track your case anytime, visit SafeSpeak and enter your Case ID: <strong>${caseId}</strong></p>

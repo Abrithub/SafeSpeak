@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image, StatusBar } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image, StatusBar, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { loginUser, BASE_URL } from '../services/api';
@@ -8,8 +8,8 @@ import { colors, spacing, radius, font, shadow } from '../theme';
 WebBrowser.maybeCompleteAuthSession();
 
 const WEB_CLIENT_ID = '379588616058-cb5dfqtqqn5bl5j0hbm4r2j2ntuep2ch.apps.googleusercontent.com';
-// Use our own backend as the OAuth redirect — avoids Expo proxy issues
-const BACKEND_REDIRECT = 'http://192.168.45.165:5000/api/auth/google/callback';
+// Use the deployed backend as the OAuth redirect
+const BACKEND_REDIRECT = 'https://safespeak-api-vkw6.onrender.com/api/auth/google/callback';
 const APP_SCHEME = 'safespeak-app://auth';
 
 export default function LoginScreen({ navigation }) {
@@ -17,6 +17,16 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [waking, setWaking] = useState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!username.trim()) e.username = 'Username is required';
+    if (!password) e.password = 'Password is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -76,10 +86,20 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
-    if (!username || !password) { Alert.alert('Required', 'Please fill in all fields'); return; }
+    if (!validate()) return;
     setLoading(true);
+    setWaking(false);
     try {
-      const res = await loginUser(username, password);
+      // Ping the server first — Render free tier sleeps after inactivity
+      try {
+        await fetch(`${BASE_URL.replace('/api', '')}/api/ping`, { signal: AbortSignal.timeout(5000) });
+      } catch {
+        // Server may be waking up — show friendly message and keep trying
+        setWaking(true);
+      }
+
+      const res = await loginUser(username.trim(), password);
+      setWaking(false);
       if (res.token) {
         await AsyncStorage.setItem('token', res.token);
         await AsyncStorage.setItem('currentUser', JSON.stringify({ username: res.username, role: res.role }));
@@ -90,9 +110,20 @@ export default function LoginScreen({ navigation }) {
           navigation.replace('MyCases');
         }
       } else {
-        Alert.alert('Error', res.message || 'Invalid credentials');
+        Alert.alert('Login Failed', res.message || 'Invalid username or password');
       }
-    } catch { Alert.alert('Error', 'Server unreachable.'); }
+    } catch (err) {
+      setWaking(false);
+      if (err?.name === 'AbortError' || err?.message?.includes('abort')) {
+        Alert.alert(
+          'Server Starting Up',
+          'The server is waking up from sleep. Please wait 30 seconds and try again.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Connection Error', 'Could not reach the server. Please check your internet connection and try again.');
+      }
+    }
     setLoading(false);
   };
 
@@ -122,24 +153,37 @@ export default function LoginScreen({ navigation }) {
           */}
 
           <Text style={s.label}>Username</Text>
-          <View style={s.inputRow}>
+          <View style={[s.inputRow, errors.username && s.inputError]}>
             <Text style={s.inputIcon}>👤</Text>
             <TextInput style={s.input} placeholder="Enter your username" value={username}
-              onChangeText={setUsername} autoCapitalize="none" placeholderTextColor={colors.textLight} />
+              onChangeText={v => { setUsername(v.replace(/\s/g, '')); setErrors(e => ({ ...e, username: '' })); }}
+              autoCapitalize="none" autoCorrect={false} maxLength={30}
+              placeholderTextColor={colors.textLight} />
           </View>
+          {errors.username ? <Text style={s.fieldError}>{errors.username}</Text> : null}
 
           <Text style={s.label}>Password</Text>
-          <View style={s.inputRow}>
+          <View style={[s.inputRow, errors.password && s.inputError]}>
             <Text style={s.inputIcon}>🔒</Text>
             <TextInput style={s.input} placeholder="Enter your password" value={password}
-              onChangeText={setPassword} secureTextEntry={!showPw} placeholderTextColor={colors.textLight} />
+              onChangeText={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })); }}
+              secureTextEntry={!showPw} autoCapitalize="none" autoCorrect={false} maxLength={50}
+              placeholderTextColor={colors.textLight} />
             <TouchableOpacity onPress={() => setShowPw(!showPw)}>
               <Text style={s.inputIcon}>{showPw ? '🙈' : '👁️'}</Text>
             </TouchableOpacity>
           </View>
+          {errors.password ? <Text style={s.fieldError}>{errors.password}</Text> : null}
+
+          {waking && (
+            <View style={s.wakingBox}>
+              <ActivityIndicator size="small" color={colors.accent} />
+              <Text style={s.wakingText}>Server is waking up, please wait...</Text>
+            </View>
+          )}
 
           <TouchableOpacity style={[s.btn, loading && s.btnDisabled]} onPress={handleLogin} disabled={loading}>
-            <Text style={s.btnText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Sign In</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={s.forgotBtn} onPress={() => navigation.navigate('ForgotPassword')}>
@@ -178,8 +222,12 @@ const s = StyleSheet.create({
   cardSub:      { fontSize: font.sm, color: colors.textSub, marginBottom: spacing.lg },
   label:        { fontSize: font.sm, fontWeight: '600', color: colors.text, marginBottom: spacing.xs, marginTop: spacing.sm },
   inputRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderRadius: radius.md, paddingHorizontal: spacing.md, marginBottom: spacing.xs, borderWidth: 1, borderColor: colors.border },
+  inputError:   { borderColor: colors.danger },
   inputIcon:    { fontSize: 16, marginRight: spacing.xs },
   input:        { flex: 1, paddingVertical: 14, fontSize: font.md, color: colors.text },
+  fieldError:   { color: colors.danger, fontSize: font.xs, marginBottom: spacing.xs, marginTop: -4 },
+  wakingBox:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#eff6ff', borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.sm },
+  wakingText:   { fontSize: font.xs, color: colors.accent, flex: 1 },
   btn:          { backgroundColor: colors.accent, paddingVertical: 15, borderRadius: radius.full, alignItems: 'center', marginTop: spacing.md },
   btnDisabled:  { opacity: 0.6 },
   btnText:      { color: '#fff', fontWeight: 'bold', fontSize: font.md },

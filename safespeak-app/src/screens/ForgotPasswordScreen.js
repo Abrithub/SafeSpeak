@@ -17,25 +17,30 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   const handleSendCode = async () => {
     if (!email.trim()) { Alert.alert('Required', 'Please enter your email'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address'); return;
+    }
     setLoading(true);
     try {
       const res = await forgotPassword(email.trim());
       if (res.message && !res.error) {
-        Alert.alert('Code Sent', 'Check your email for the reset code.');
+        Alert.alert('Code Sent', 'Check your email for the 6-digit reset code.');
         setStep(2);
       } else {
         Alert.alert('Error', res.message || 'Failed to send reset code.');
       }
     } catch {
-      Alert.alert('Error', 'Server unreachable.');
+      Alert.alert('Connection Error', 'Could not reach the server. Please try again.');
     }
     setLoading(false);
   };
 
   const handleReset = async () => {
-    if (!code.trim() || !newPw) { Alert.alert('Required', 'Please fill all fields'); return; }
-    if (newPw !== confirmPw) { Alert.alert('Error', 'Passwords do not match'); return; }
-    if (newPw.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters'); return; }
+    if (!code.trim()) { Alert.alert('Required', 'Please enter the reset code'); return; }
+    if (!/^\d{6}$/.test(code.trim())) { Alert.alert('Invalid Code', 'Reset code must be 6 digits'); return; }
+    if (!newPw) { Alert.alert('Required', 'Please enter a new password'); return; }
+    if (newPw.length < 6) { Alert.alert('Too Short', 'Password must be at least 6 characters'); return; }
+    if (newPw !== confirmPw) { Alert.alert('Mismatch', 'Passwords do not match'); return; }
     setLoading(true);
     try {
       const res = await resetPassword(email.trim(), code.trim(), newPw);
@@ -47,7 +52,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         Alert.alert('Error', res.message || 'Invalid or expired code.');
       }
     } catch {
-      Alert.alert('Error', 'Server unreachable.');
+      Alert.alert('Connection Error', 'Could not reach the server. Please try again.');
     }
     setLoading(false);
   };

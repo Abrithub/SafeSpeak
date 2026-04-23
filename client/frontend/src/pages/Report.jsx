@@ -27,6 +27,27 @@ export default function Report() {
   const user  = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isLoggedIn = !!token && user.role === 'reporter';
 
+  // Block admins from reporting
+  if (token && user.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaShieldAlt className="text-red-500 text-2xl" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Not Available for Admins</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Admin accounts cannot submit reports. Please use a reporter account to submit an incident report.
+          </p>
+          <Link to="/dashboard"
+            className="inline-block bg-[#1a2340] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-[#243060] transition">
+            Go to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // If not logged in, show gate screen
   if (!isLoggedIn) {
     return (
@@ -290,3 +311,4 @@ export default function Report() {
     </div>
   );
 }
+   

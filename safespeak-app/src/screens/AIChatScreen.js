@@ -8,7 +8,7 @@ import { colors, spacing, radius, font } from '../theme';
 
 const WELCOME = {
   id: 'welcome', role: 'ai',
-  text: "Hi 👋 I'm your SafeSpeak Mentor. I can help you:\n• Report an incident step by step\n• Understand what happens after you report\n• Stay safe right now\n• Answer any questions you have\n\nWhat do you need help with?",
+  text: "Hi 👋 I'm your SafeSpeak AI. I can help you:\n• Report an incident step by step\n• Understand what happens after you report\n• Stay safe right now\n• Answer any questions you have\n\nWhat do you need help with?",
 };
 
 const QUICK_PROMPTS = [
@@ -97,6 +97,20 @@ export default function AIChatScreen() {
         renderItem={renderMessage}
         contentContainerStyle={s.list}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        ListFooterComponent={
+          showQuick ? (
+            <View style={s.quickWrap}>
+              <Text style={s.quickLabel}>Quick questions:</Text>
+              <View style={s.quickRow}>
+                {QUICK_PROMPTS.map(p => (
+                  <TouchableOpacity key={p.label} style={s.quickBtn} onPress={() => send(p.text)}>
+                    <Text style={s.quickBtnText}>{p.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : null
+        }
       />
       {loading && (
         <View style={s.typingRow}>
@@ -112,9 +126,9 @@ export default function AIChatScreen() {
           placeholder="Type your message..."
           placeholderTextColor={colors.textLight}
           multiline
-          onSubmitEditing={send}
+          maxLength={1000}
         />
-        <TouchableOpacity style={[s.sendBtn, !input.trim() && s.sendBtnDisabled]} onPress={send} disabled={!input.trim() || loading}>
+        <TouchableOpacity style={[s.sendBtn, !input.trim() && s.sendBtnDisabled]} onPress={() => send()} disabled={!input.trim() || loading}>
           <Text style={s.sendIcon}>➤</Text>
         </TouchableOpacity>
       </View>
@@ -143,4 +157,9 @@ const s = StyleSheet.create({
   sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled:{ backgroundColor: colors.border },
   sendIcon:       { color: '#fff', fontSize: 16 },
+  quickWrap:      { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  quickLabel:     { fontSize: font.xs, color: colors.textSub, marginBottom: spacing.xs },
+  quickRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  quickBtn:       { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 7 },
+  quickBtnText:   { fontSize: font.xs, color: colors.text, fontWeight: '500' },
 });

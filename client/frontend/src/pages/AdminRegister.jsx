@@ -7,30 +7,28 @@ const ADMIN_SECRET_KEY = "safespeak@2025"; // client-side pre-check only
 
 const AdminRegister = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // step 1: verify secret key, step 2: create account
+  const [step, setStep] = useState(1);
   const [secretKey, setSecretKey] = useState("");
-  const [form, setForm] = useState({ username: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "" });
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const verifyKey = (e) => {
     e.preventDefault();
-    if (secretKey === ADMIN_SECRET_KEY) {
-      setError("");
-      setStep(2);
-    } else {
-      setError("Invalid authorization key.");
-    }
+    if (secretKey === ADMIN_SECRET_KEY) { setError(""); setStep(2); }
+    else setError("Invalid authorization key.");
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
+    if (!form.email.trim()) { setError("Email is required."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError("Enter a valid email address."); return; }
     if (form.password.length < 8) { setError("Admin password must be at least 8 characters."); return; }
     if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
     try {
-      const res = await registerAdmin(form.username, form.password, secretKey);
+      const res = await registerAdmin(form.username, form.password, secretKey, form.email);
       if (res.token) { setSuccess(true); setTimeout(() => navigate("/login"), 1800); }
       else setError(res.message || "Registration failed.");
     } catch { setError("Server unreachable. Please try again."); }
@@ -103,6 +101,20 @@ const AdminRegister = () => {
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2340]"
                   placeholder="Choose admin username" required />
               </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">✉️</span>
+                <input type="email" value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2340]"
+                  placeholder="admin@organization.com" required />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Used for login and account recovery.</p>
             </div>
 
             <div>
